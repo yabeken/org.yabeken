@@ -9,3 +9,10 @@
 function pear($package){
 	return Pea::import($package);
 }
+/**
+ * PEAR パスを取得
+ * @return string
+ */
+function pear_path(){
+	return Pea::pear_path();
+}
