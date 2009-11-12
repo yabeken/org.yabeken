@@ -77,11 +77,8 @@ class Pea{
 		list($domain,$package_name,$package_version) = self::parse_package($package_path);
 		if(isset(self::$IMPORTED[strtolower($domain."/".$package_name)])) return self::$IMPORTED[strtolower($domain."/".$package_name)];
 		$path = File::path(self::pear_path(),strtr($package_name,"_","/").".php");
-		if(!File::exist($path)){
-			
-			self::install($package_path);
-		}
-		if(File::exist($path)) include_once($path);
+		if(!File::exist($path)) self::install($package_path);
+		require_once($path);
 		self::$IMPORTED[strtolower($domain."/".$package_name)] = class_exists($package_name) ? $package_name : null;
 		return self::$IMPORTED[strtolower($domain."/".$package_name)];
 	}
@@ -92,7 +89,7 @@ class Pea{
 	 */
 	static public function install($package_path){
 		list($domain,$package_name,$package_version) = self::parse_package($package_path);
-		if(isset(self::$INSTALL[strtolower($domain."/".$package_name)])) return;
+		if(isset(self::$INSTALL[strtolower($domain."/".$package_name)])) return true;
 		if(!isset(self::$CHANNEL[$domain])) self::channel_discover($domain);
 		
 		$allreleases_xml = self::$CHANNEL[$domain]."/r/".strtolower($package_name)."/allreleases.xml";
@@ -118,7 +115,7 @@ class Pea{
 		}
 		if(empty($target_version)) throw new RuntimeException($package_path." not found");
 		
-		$download_path = File::path(App::work("pear"),strtr($domain,".","_")."_".$target_package."_".strtr($target_version,".","_"));
+		$download_path = File::path(App::work("pear"),str_replace(array(".","-"),"_",$domain)."_".$target_package."_".strtr($target_version,".","_"));
 		$download_url = "http://".$domain."/get/".$target_package."-".$target_version.".tgz";
 		if(!File::exist($download_path)){
 			File::untgz($download_url,$download_path);
@@ -158,10 +155,10 @@ class Pea{
 						}
 					}
 					foreach($package->f("contents.in(dir)") as $dir){
-						$baseinstalldir = $dir->inParam("baseinstalldir","/");
+						$default_baseinstalldir = $dir->inParam("baseinstalldir","/");
 						foreach($dir->in("file") as $file){
 							if($file->inParam("role") != "php") continue;
-							$baseinstalldir = File::path(self::pear_path(),$file->inParam("baseinstalldir",$baseinstalldir));
+							$baseinstalldir = File::path(self::pear_path(),$file->inParam("baseinstalldir",$default_baseinstalldir));
 							$name = $file->inParam("name");
 							$src = File::path($download_path,File::path($target_package."-".$target_version,$name));
 							$dst = File::path($baseinstalldir,$name);
@@ -174,6 +171,7 @@ class Pea{
 			}
 		}
 		unset(self::$INSTALL[strtolower($domain."/".$target_package)]);
+		return true;
 	}
 	static protected function parse_package($package_path){
 		list($domain,$name) = (strpos($package_path,"/")===false) ? array("pear.php.net",$package_path) : explode("/",$package_path,2);
