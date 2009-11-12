@@ -76,23 +76,28 @@ class Pea{
 		self::r();
 		list($domain,$package_name,$package_version) = self::parse_package($package_path);
 		if(isset(self::$IMPORTED[strtolower($domain."/".$package_name)])) return self::$IMPORTED[strtolower($domain."/".$package_name)];
-		self::install($package_path);
-		return $package_name;
+		$path = File::path(self::pear_path(),strtr($package_name,"_","/").".php");
+		if(!File::exist($path)){
+			
+			self::install($package_path);
+		}
+		if(File::exist($path)) include_once($path);
+		self::$IMPORTED[strtolower($domain."/".$package_name)] = class_exists($package_name) ? $package_name : null;
+		return self::$IMPORTED[strtolower($domain."/".$package_name)];
 	}
 	/**
 	 * インストール
 	 * @param string $package_path
-	 * @param boolean $force
 	 * @return boolean
 	 */
-	static protected function install($package_path,$force=false){
+	static public function install($package_path){
 		list($domain,$package_name,$package_version) = self::parse_package($package_path);
 		if(isset(self::$INSTALL[strtolower($domain."/".$package_name)])) return;
 		if(!isset(self::$CHANNEL[$domain])) self::channel_discover($domain);
 		
 		$allreleases_xml = self::$CHANNEL[$domain]."/r/".strtolower($package_name)."/allreleases.xml";
 		if(!Tag::setof($a,R(Http)->do_get($allreleases_xml)->body(),"a")) throw new RuntimeException($package_path." not found");
-		$target_package = $a->f("p.value()");
+		$target_package = $package_name;
 		$target_version = null;
 		$target_state = self::$PREFFERED_STATE;
 		if(isset(self::$states[$package_version]) && self::$states[$package_version] > $target_state){
@@ -103,8 +108,6 @@ class Pea{
 			$v = $r->f("v.value()");
 			if(!empty($package_version)){
 				if($package_version == $v) $target_version = $v;
-			}else if($force){
-				$target_version = $v;
 			}else{
 				$s = $r->f("s.value()");
 				if(isset(self::$states[$s]) && self::$states[$s] <= $target_state){
@@ -128,13 +131,15 @@ class Pea{
 					if(self::$DEPENDENCY){
 						foreach($package->f("deps.in(dep)") as $dep){
 							if($dep->inParam("type")=="pkg"){
-								if(self::$OPTIONAL || $dep->inParam("optional") == "no") self::install($dep->value(),true);
+								if(self::$OPTIONAL || $dep->inParam("optional") == "no"){
+									self::install($dep->value());
+								}
 							}
 						}
 					}
 					foreach($package->f("release.filelist.in(file)") as $file){
 						if($file->inParam("role") != "php") continue;
-						$baseinstalldir = $file->inParam("baseinstalldir");
+						$baseinstalldir = File::path(self::pear_path(),$file->inParam("baseinstalldir"));
 						$name = $file->inParam("name");
 						$src = File::path($download_path,File::path($target_package."-".$target_version,$name));
 						$dst = File::path($baseinstalldir,$name);
@@ -144,11 +149,11 @@ class Pea{
 				case "2.0":
 					if(self::$DEPENDENCY){
 						foreach($package->f("dependencies.required.in(package)") as $dep){
-							self::install($dep->f("channel.value()")."/".$dep->f("name.value()"),true);
+							self::install($dep->f("channel.value()")."/".$dep->f("name.value()"));
 						}
 						if(self::$OPTIONAL){
 							foreach($package->f("dependencies.optional.in(package)") as $dep){
-								self::install($dep->f("channel.value()")."/".$dep->f("name.value()"),true);
+								self::install($dep->f("channel.value()")."/".$dep->f("name.value()"));
 							}
 						}
 					}
