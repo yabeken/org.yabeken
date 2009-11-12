@@ -1,6 +1,4 @@
 <?php
-require_once(dirname(__FILE__)."/__funcs__.php");
-
 /**
  * PEAR ライブラリ制御
  * @author Kentaro YABE
@@ -17,11 +15,13 @@ class Pea{
 	static private $states = array("stable"=>0,"beta"=>1,"alpha"=>2,"devel"=>3);
 	static private $prepared = false;
 	
-	/**
-	 * PEARの準備準備
-	 * Pea::r なんちって
-	 */
+	const STATE_STABLE = "stable";
+	const STATE_BETA = "beta";
+	const STATE_ALPHA = "alpha";
+	const STATE_DEVELOP = "devel";
+	
 	static private function r(){
+		//Pea::r なんちって
 		if(self::$prepared) return;
 		if(!File::exist(File::path(self::pear_path(),"PEAR.php"))){
 			self::install("pear.php.net/PEAR");
@@ -30,6 +30,27 @@ class Pea{
 		require_once(File::path(self::pear_path(),"PEAR5.php"));
 		set_include_path(self::pear_path());
 		self::$prepared = true;
+	}
+	/**
+	 * インストールパッケージ設定
+	 * @param string $state
+	 */
+	static public function config_preffered_state($state){
+		if(isset(self::$states[$state])) self::$PREFFERED_STATE = self::$states[$state];
+	}
+	/**
+	 * 依存インストール設定
+	 * @param boolean $dependency
+	 */
+	static public function config_dependency($dependency){
+		self::$DEPENDENCY = (bool)$dependency;
+	}
+	/**
+	 * オプションインストール設定
+	 * @param boolean $optional
+	 */
+	static public function config_optional($optional){
+		self::$OPTIONAL = (bool)$optional;
 	}
 	/**
 	 * PEARパスを設定する
@@ -56,6 +77,7 @@ class Pea{
 		list($domain,$package_name,$package_version) = self::parse_package($package_path);
 		if(isset(self::$IMPORTED[strtolower($domain."/".$package_name)])) return self::$IMPORTED[strtolower($domain."/".$package_name)];
 		self::install($package_path);
+		return $package_name;
 	}
 	/**
 	 * インストール
@@ -163,5 +185,17 @@ class Pea{
 		}
 		throw new Exception("channel [{$domain}] not found");
 	}
+}
+?>
+<?php
+/**
+ * PEAR ライブラリの読み込み
+ * pear("pear.php.net/DB");
+ * pear("openpear.org/Wozozo_Unko");
+ * @param string $package
+ * @return string インポートしたクラス名
+ */
+function pear($package){
+	return Pea::import($package);
 }
 ?>
