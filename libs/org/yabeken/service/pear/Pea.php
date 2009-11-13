@@ -28,8 +28,8 @@ class Pea extends Http{
 		if(!File::exist(File::path(self::pear_path(),"PEAR.php"))){
 			self::install("pear.php.net/PEAR");
 		}
-		require(File::path(self::pear_path(),"PEAR.php"));
 		set_include_path(self::pear_path().PATH_SEPARATOR.get_include_path());
+		require(File::path(self::pear_path(),"PEAR.php"));
 		self::$prepared = true;
 	}
 	/**
