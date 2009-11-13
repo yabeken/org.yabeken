@@ -28,8 +28,8 @@ class Pea extends Http{
 		if(!File::exist(File::path(self::pear_path(),"PEAR.php"))){
 			self::install("pear.php.net/PEAR");
 		}
-		require_once(File::path(self::pear_path(),"PEAR.php"));
-		require_once(File::path(self::pear_path(),"PEAR5.php"));
+		require(File::path(self::pear_path(),"PEAR.php"));
+		require(File::path(self::pear_path(),"PEAR5.php"));
 		set_include_path(self::pear_path());
 		self::$prepared = true;
 	}
@@ -81,7 +81,7 @@ class Pea extends Http{
 		if(isset(self::$IMPORTED[$package_key])) return self::$IMPORTED[$package_key];
 		$path = File::path(self::pear_path(),strtr($package_name,"_","/").".php");
 		if(!File::exist($path)) self::install($package_path);
-		require_once($path);
+		require($path);
 		self::$IMPORTED[$package_key] = class_exists($package_name) ? $package_name : null;
 		return self::$IMPORTED[$package_key];
 	}
