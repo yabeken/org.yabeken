@@ -77,12 +77,13 @@ class Pea extends Http{
 	static public function import($package_path){
 		self::r();
 		list($domain,$package_name,$package_version) = self::parse_package($package_path);
-		if(isset(self::$IMPORTED[strtolower($domain."/".$package_name)])) return self::$IMPORTED[strtolower($domain."/".$package_name)];
+		$package_key = strtolower($domain."/".$package_name);
+		if(isset(self::$IMPORTED[$package_key])) return self::$IMPORTED[$package_key];
 		$path = File::path(self::pear_path(),strtr($package_name,"_","/").".php");
 		if(!File::exist($path)) self::install($package_path);
 		require_once($path);
-		self::$IMPORTED[strtolower($domain."/".$package_name)] = class_exists($package_name) ? $package_name : null;
-		return self::$IMPORTED[strtolower($domain."/".$package_name)];
+		self::$IMPORTED[$package_key] = class_exists($package_name) ? $package_name : null;
+		return self::$IMPORTED[$package_key];
 	}
 	/**
 	 * インストール
