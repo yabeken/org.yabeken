@@ -4,7 +4,9 @@
  * @author Kentaro YABE
  * @license New BSD License
  */
-class Pea{
+class Pea extends Http{
+	protected $agent = "Pea (PEAR Client) powered by rhaco2";
+	
 	static private $PEAR_PATH;
 	static private $IMPORTED = array();
 	static private $CHANNEL = array();
@@ -93,7 +95,7 @@ class Pea{
 		if(!isset(self::$CHANNEL[$domain])) self::channel_discover($domain);
 		
 		$allreleases_xml = self::$CHANNEL[$domain]."/r/".strtolower($package_name)."/allreleases.xml";
-		if(!Tag::setof($a,R(Http)->do_get($allreleases_xml)->body(),"a")) throw new RuntimeException($package_path." not found");
+		if(!Tag::setof($a,R(new self())->do_get($allreleases_xml)->body(),"a")) throw new RuntimeException($package_path." not found");
 		$target_package = $package_name;
 		$target_version = null;
 		$target_state = self::$PREFFERED_STATE;
@@ -118,7 +120,7 @@ class Pea{
 		$download_path = File::path(App::work("pear"),str_replace(array(".","-"),"_",$domain)."_".$target_package."_".strtr($target_version,".","_"));
 		$download_url = "http://".$domain."/get/".$target_package."-".$target_version.".tgz";
 		if(!File::exist($download_path)){
-			File::untgz($download_url,$download_path);
+			self::download($download_url,$download_path);
 		}
 		$package_xml = File::exist(File::path($download_path,"package2.xml")) ? File::path($download_path,"package2.xml") : File::path($download_path,"package.xml");
 		self::$INSTALL[strtolower($domain."/".$target_package)] = $package_xml;
@@ -173,13 +175,22 @@ class Pea{
 		unset(self::$INSTALL[strtolower($domain."/".$target_package)]);
 		return true;
 	}
+	static protected function download($url,$outpath){
+		$tmpname = File::absolute($outpath,File::temp_path($outpath));
+		if(R(new self())->do_download($url,$tmpname)->status() != 200){
+			File::rm($tmpname);
+			throw new ErrorException();
+		}
+		File::untgz($tmpname,$outpath);
+		File::rm($tmpname);
+	}
 	static protected function parse_package($package_path){
 		list($domain,$name) = (strpos($package_path,"/")===false) ? array("pear.php.net",$package_path) : explode("/",$package_path,2);
 		list($name,$version) = (strpos($name,"-")===false) ? array($name,null) : explode("-",$name,2);
 		return array($domain,$name,$version);
 	}
 	static protected function channel_discover($domain){
-		if(Tag::setof($channel,R(Http)->do_get("http://{$domain}/channel.xml")->body())){
+		if(Tag::setof($channel,R(new self())->do_get("http://{$domain}/channel.xml")->body())){
 			$url = $channel->f("rest.baseurl[0].value()");
 			if(!empty($url)){
 				self::$CHANNEL[$domain] = (substr($url,-1)=="/") ? $url = substr($url,0,-1) : $url;
