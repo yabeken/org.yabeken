@@ -30,7 +30,7 @@ class Pea extends Http{
 		}
 		require(File::path(self::pear_path(),"PEAR.php"));
 		require(File::path(self::pear_path(),"PEAR5.php"));
-		set_include_path(self::pear_path());
+		set_include_path(self::pear_path().PATH_SEPARATOR.get_include_path());
 		self::$prepared = true;
 	}
 	/**
