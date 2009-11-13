@@ -91,6 +91,7 @@ class Pea extends Http{
 	 */
 	static public function install($package_path){
 		list($domain,$package_name,$package_version) = self::parse_package($package_path);
+		if(strtolower($package_name) != "pear") self::r();
 		if(isset(self::$INSTALL[strtolower($domain."/".$package_name)])) return true;
 		if(!isset(self::$CHANNEL[$domain])) self::channel_discover($domain);
 		
