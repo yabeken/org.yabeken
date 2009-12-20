@@ -126,21 +126,21 @@ class Pea extends Http{
 		$package_xml = File::exist(File::path($download_path,"package2.xml")) ? File::path($download_path,"package2.xml") : File::path($download_path,"package.xml");
 		self::$INSTALL[strtolower($domain."/".$target_package)] = $package_xml;
 		if(Tag::setof($package,File::read($package_xml),"package")){
-			switch($package->inParam("version")){
+			switch($package->in_param("version")){
 				case "1.0":
 					if(self::$DEPENDENCY){
 						foreach($package->f("deps.in(dep)") as $dep){
-							if($dep->inParam("type")=="pkg"){
-								if(self::$OPTIONAL || $dep->inParam("optional") == "no"){
+							if($dep->in_param("type")=="pkg"){
+								if(self::$OPTIONAL || $dep->in_param("optional") == "no"){
 									self::install($dep->value());
 								}
 							}
 						}
 					}
 					foreach($package->f("release.filelist.in(file)") as $file){
-						if($file->inParam("role") != "php") continue;
-						$baseinstalldir = File::path(self::pear_path(),$file->inParam("baseinstalldir"));
-						$name = $file->inParam("name");
+						if($file->in_param("role") != "php") continue;
+						$baseinstalldir = File::path(self::pear_path(),$file->in_param("baseinstalldir"));
+						$name = $file->in_param("name");
 						$src = File::path($download_path,File::path($target_package."-".$target_version,$name));
 						$dst = File::path($baseinstalldir,$name);
 						File::copy($src,$dst);
@@ -158,11 +158,11 @@ class Pea extends Http{
 						}
 					}
 					foreach($package->f("contents.in(dir)") as $dir){
-						$default_baseinstalldir = $dir->inParam("baseinstalldir","/");
+						$default_baseinstalldir = $dir->in_param("baseinstalldir","/");
 						foreach($dir->in("file") as $file){
-							if($file->inParam("role") != "php") continue;
-							$baseinstalldir = File::path(self::pear_path(),$file->inParam("baseinstalldir",$default_baseinstalldir));
-							$name = $file->inParam("name");
+							if($file->in_param("role") != "php") continue;
+							$baseinstalldir = File::path(self::pear_path(),$file->in_param("baseinstalldir",$default_baseinstalldir));
+							$name = $file->in_param("name");
 							$src = File::path($download_path,File::path($target_package."-".$target_version,$name));
 							$dst = File::path($baseinstalldir,$name);
 							File::copy($src,$dst);

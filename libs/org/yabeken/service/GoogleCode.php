@@ -103,7 +103,7 @@ class GoogleCode extends Http{
 			$this->do_get(sprintf("http://code.google.com/p/%s/downloads/list?start=%d",$this->project,$offset));
 			if(Tag::setof($body,$this->body,"body")){
 				foreach($body->f("table[3].in(tr)") as $tr){
-					if($tr->inParam("id") == "headingrow") continue;
+					if($tr->in_param("id") == "headingrow") continue;
 					if(preg_match(sprintf("@\"(http://%s\.googlecode\.com/files/.+?)\"@i",$this->project),$tr->plain(),$matches)){
 						$file = new File($matches[1]);
 						$info = array();
