@@ -1,0 +1,9 @@
+.buildpath
+.settings
+core
+__settings__.php
+setup.php
+test*
+work
+vendors
+.project

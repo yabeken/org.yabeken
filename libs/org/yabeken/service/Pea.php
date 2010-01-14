@@ -14,6 +14,7 @@ class Pea extends Http{
 	static private $PREFFERED_STATE = 0;
 	static private $DEPENDENCY = false;
 	static private $OPTIONAL = false;
+	
 	static private $states = array("stable"=>0,"beta"=>1,"alpha"=>2,"devel"=>3);
 	static private $prepared = false;
 	
@@ -25,48 +26,18 @@ class Pea extends Http{
 	static private function r(){
 		//Pea::r なんちって
 		if(self::$prepared) return;
-		if(!File::exist(File::path(self::pear_path(),"PEAR.php"))){
+		self::$PEAR_PATH = module_const("pear_path",File::path(dirname(Lib::vendors_path()),"pear"));
+		if(!File::exist(File::path(self::$PEAR_PATH,"PEAR.php"))){
+			self::$DEPENDENCY = false;
 			self::install("pear.php.net/PEAR");
 		}
-		set_include_path(self::pear_path().PATH_SEPARATOR.get_include_path());
-		require(File::path(self::pear_path(),"PEAR.php"));
+		self::$DEPENDENCY = module_const("dependency",true);
+		self::$OPTIONAL = module_const("optional",false);
+		$state = module_const("state",self::STATE_STABLE);
+		self::$PREFFERED_STATE = isset(self::$states[$state]) ? self::$states[$state] : self::STATE_STABLE;
+		set_include_path(self::$PEAR_PATH.PATH_SEPARATOR.get_include_path());
+		require(File::path(self::$PEAR_PATH,"PEAR.php"));
 		self::$prepared = true;
-	}
-	/**
-	 * インストールパッケージ設定
-	 * @param string $state
-	 */
-	static public function config_preffered_state($state){
-		if(isset(self::$states[$state])) self::$PREFFERED_STATE = self::$states[$state];
-	}
-	/**
-	 * 依存インストール設定
-	 * @param boolean $dependency
-	 */
-	static public function config_dependency($dependency){
-		self::$DEPENDENCY = (bool)$dependency;
-	}
-	/**
-	 * オプションインストール設定
-	 * @param boolean $optional
-	 */
-	static public function config_optional($optional){
-		self::$OPTIONAL = (bool)$optional;
-	}
-	/**
-	 * PEARパスを設定する
-	 * @param string $pear_path
-	 */
-	static public function config_path($pear_path){
-		if(isset($pear_path)) self::$PEAR_PATH = $pear_path;
-	}
-	/**
-	 * PEARパスを返す
-	 * @return string
-	 */
-	static public function pear_path(){
-		if(!isset(self::$PEAR_PATH)) self::$PEAR_PATH = File::path(Lib::vendors_path(),"pear");
-		return self::$PEAR_PATH;
 	}
 	/**
 	 * PEAR ライブラリを読み込む
@@ -78,7 +49,7 @@ class Pea extends Http{
 		list($domain,$package_name,$package_version) = self::parse_package($package_path);
 		$package_key = strtolower($domain."/".$package_name);
 		if(isset(self::$IMPORTED[$package_key])) return self::$IMPORTED[$package_key];
-		$path = File::path(self::pear_path(),strtr($package_name,"_","/").".php");
+		$path = File::path(self::$PEAR_PATH,strtr($package_name,"_","/").".php");
 		if(!File::exist($path)) self::install($package_path);
 		require($path);
 		self::$IMPORTED[$package_key] = class_exists($package_name) ? $package_name : null;
@@ -139,7 +110,7 @@ class Pea extends Http{
 					}
 					foreach($package->f("release.filelist.in(file)") as $file){
 						if($file->in_param("role") != "php") continue;
-						$baseinstalldir = File::path(self::pear_path(),$file->in_param("baseinstalldir"));
+						$baseinstalldir = File::path(self::$PEAR_PATH,$file->in_param("baseinstalldir"));
 						$name = $file->in_param("name");
 						$src = File::path($download_path,File::path($target_package."-".$target_version,$name));
 						$dst = File::path($baseinstalldir,$name);
@@ -161,7 +132,7 @@ class Pea extends Http{
 						$default_baseinstalldir = $dir->in_param("baseinstalldir","/");
 						foreach($dir->in("file") as $file){
 							if($file->in_param("role") != "php") continue;
-							$baseinstalldir = File::path(self::pear_path(),$file->in_param("baseinstalldir",$default_baseinstalldir));
+							$baseinstalldir = File::path(self::$PEAR_PATH,$file->in_param("baseinstalldir",$default_baseinstalldir));
 							$name = $file->in_param("name");
 							$src = File::path($download_path,File::path($target_package."-".$target_version,$name));
 							$dst = File::path($baseinstalldir,$name);
@@ -180,7 +151,7 @@ class Pea extends Http{
 		$tmpname = File::absolute($outpath,File::temp_path($outpath));
 		if(R(new self())->do_download($url,$tmpname)->status() != 200){
 			File::rm($tmpname);
-			throw new ErrorException();
+			throw new ErrorException("download failed [{$url}]");
 		}
 		File::untgz($tmpname,$outpath);
 		File::rm($tmpname);
