@@ -28,7 +28,6 @@ class Pea extends Http{
 		if(self::$prepared) return;
 		self::$PEAR_PATH = module_const("pear_path",File::path(dirname(Lib::vendors_path()),"pear"));
 		if(!File::exist(File::path(self::$PEAR_PATH,"PEAR.php"))){
-			self::$DEPENDENCY = false;
 			self::install("pear.php.net/PEAR");
 		}
 		self::$DEPENDENCY = module_const("dependency",true);
