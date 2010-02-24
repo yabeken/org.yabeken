@@ -1,7 +1,7 @@
 <?php
 /**
  * PEAR ライブラリ制御
- * @author Kentaro YABE
+ * @author yabeken
  * @license New BSD License
  */
 class Pea extends Http{
@@ -93,7 +93,7 @@ class Pea extends Http{
 		if(!File::exist($download_path)){
 			self::download($download_url,$download_path);
 		}
-		$package_xml = File::exist(File::path($download_path,"package2.xml")) ? File::path($download_path,"package2.xml") : File::path($download_path,"package.xml");
+		$package_xml = File::exist(File::path($download_path,"package.xml")) ? File::path($download_path,"package.xml") : File::path($download_path,"package2.xml");
 		self::$INSTALL[strtolower($domain."/".$target_package)] = $package_xml;
 		if(Tag::setof($package,File::read($package_xml),"package")){
 			switch($package->in_param("version")){
@@ -169,6 +169,20 @@ class Pea extends Http{
 			}
 		}
 		throw new Exception("channel [{$domain}] not found");
+	}
+	/**
+	 * pear package install
+	 * @param Request $req
+	 * @param string $value
+	 */
+	static public function __setup_pear_install__(Request $req,$value){
+		$package = $req->in_vars("pear_install");
+		if($req->is_vars("nodeps")) self::$DEPENDENCY = false;
+		if($req->is_vars("optional")) self::$OPTIONAL = true;
+		if($req->is_vars("state")) self::$PREFFERED_STATE = $req->in_vars("state");
+		if(self::install($package)){
+			println($package." installed");
+		}
 	}
 }
 ?>
