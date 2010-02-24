@@ -50,7 +50,7 @@ class Pea extends Http{
 		if(isset(self::$IMPORTED[$package_key])) return self::$IMPORTED[$package_key];
 		$path = File::path(self::$PEAR_PATH,strtr($package_name,"_","/").".php");
 		if(!File::exist($path)) self::install($package_path);
-		require($path);
+		include_once($path);
 		self::$IMPORTED[$package_key] = class_exists($package_name) ? $package_name : null;
 		return self::$IMPORTED[$package_key];
 	}
