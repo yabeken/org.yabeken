@@ -181,7 +181,7 @@ class Pea extends Http{
 		if($req->is_vars("optional")) self::$OPTIONAL = true;
 		if($req->is_vars("state")) self::$PREFFERED_STATE = $req->in_vars("state");
 		if(self::install($package)){
-			println($package." installed");
+			println("installed ".$package);
 		}
 	}
 }
