@@ -176,12 +176,74 @@ class Pea extends Http{
 	 * @param string $value
 	 */
 	static public function __setup_pear_install__(Request $req,$value){
-		$package = $req->in_vars("pear_install");
 		if($req->is_vars("nodeps")) self::$DEPENDENCY = false;
 		if($req->is_vars("optional")) self::$OPTIONAL = true;
 		if($req->is_vars("state")) self::$PREFFERED_STATE = $req->in_vars("state");
-		if(self::install($package)){
-			println("installed ".$package);
+		if(self::install($value)){
+			println("installed ".$value);
+		}
+	}
+	/**
+	 * pear package
+	 * @param Request $req
+	 * @param string $value
+	 */
+	static public function __setup_pear_package__(Request $req,$value){
+		$url = trim(self::channel_discover($value),"/") . ($req->is_vars("category") ? "/c/".$req->in_vars("category")."/packages.xml" : "/p/packages.xml");
+		if(Tag::setof($package,R(new self())->do_get($url)->body())){
+			foreach($package->in("p") as $p){
+				println($p->value());
+			}
+		}
+	}
+	/**
+	 * pear package cateogry
+	 * @param Request $req
+	 * @param string $value
+	 */
+	static public function __setup_pear_category__(Request $req,$value){
+		$url = trim(self::channel_discover($value),"/")."/c/categories.xml";
+		if(Tag::setof($package,R(new self())->do_get($url)->body())){
+			foreach($package->in("c") as $c){
+				println($c->value());
+			}
+		}
+	}
+	/**
+	 * pear list
+	 * @param Request $req
+	 * @param string $value
+	 */
+	static public function __setup_pear_list__(Request $req,$value){
+		$result = array();
+		$channel = $req->in_vars("channel");
+		foreach(File::dir(work_path("pear")) as $dir){
+			$package_xml = File::exist(File::path($dir,"package2.xml")) ? File::path($dir,"package2.xml") : File::path($dir,"package.xml");
+			if(Tag::setof($package,File::read($package_xml),"package")){
+				$c = $n = $v = $s = "";
+				switch($package->in_param("version")){
+					case "1.0":
+						$c = "unknown";
+						$n = $package->f("name.value()");
+						$v = $package->f("release.version.value()");
+						$s = $package->f("release.state.value()");
+						break;
+					case "2.0":
+						$c = $package->f("channel.value()");
+						$n = $package->f("name.value()");
+						$v = $package->f("version.release.value()");
+						$s = $package->f("stability.release.value()");
+						break;
+				}
+				if($channel != "" && !preg_match(sprintf("/%s/i",preg_quote($channel)),$c)) continue;
+				$result[$c][] = sprintf("%s %s %s",$n,$v,$s);
+			}
+		}
+		foreach($result as $c => $list){
+			println(sprintf("Installed packages, channel %s:",$c));
+			println("=========================================");
+			println("Package Version State");
+			println(implode("\n",$list)."\n");
 		}
 	}
 }
