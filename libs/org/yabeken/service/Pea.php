@@ -1,7 +1,7 @@
 <?php
 /**
  * PEAR ライブラリ制御
- * @author Kentaro YABE
+ * @author yabeken
  * @license New BSD License
  */
 class Pea extends Http{
@@ -50,7 +50,7 @@ class Pea extends Http{
 		if(isset(self::$IMPORTED[$package_key])) return self::$IMPORTED[$package_key];
 		$path = File::path(self::$PEAR_PATH,strtr($package_name,"_","/").".php");
 		if(!File::exist($path)) self::install($package_path);
-		require($path);
+		include_once($path);
 		self::$IMPORTED[$package_key] = class_exists($package_name) ? $package_name : null;
 		return self::$IMPORTED[$package_key];
 	}
@@ -93,7 +93,7 @@ class Pea extends Http{
 		if(!File::exist($download_path)){
 			self::download($download_url,$download_path);
 		}
-		$package_xml = File::exist(File::path($download_path,"package2.xml")) ? File::path($download_path,"package2.xml") : File::path($download_path,"package.xml");
+		$package_xml = File::exist(File::path($download_path,"package.xml")) ? File::path($download_path,"package.xml") : File::path($download_path,"package2.xml");
 		self::$INSTALL[strtolower($domain."/".$target_package)] = $package_xml;
 		if(Tag::setof($package,File::read($package_xml),"package")){
 			switch($package->in_param("version")){
@@ -169,6 +169,47 @@ class Pea extends Http{
 			}
 		}
 		throw new Exception("channel [{$domain}] not found");
+	}
+	/**
+	 * pear package install
+	 * @param Request $req
+	 * @param string $value
+	 */
+	static public function __setup_pear_install__(Request $req,$value){
+		if($req->is_vars("nodeps")) self::$DEPENDENCY = false;
+		if($req->is_vars("optional")) self::$OPTIONAL = true;
+		if($req->is_vars("state")) self::$PREFFERED_STATE = $req->in_vars("state");
+		if(self::install($value)){
+			println("installed ".$value);
+		}
+	}
+	/**
+	 * pear package
+	 * @param Request $req
+	 * @param string $value
+	 */
+	static public function __setup_pear_package__(Request $req,$value){
+		if($value == "") $value = "pear.php.net";
+		$url = trim(self::channel_discover($value),"/") . ($req->is_vars("category") ? "/c/".$req->in_vars("category")."/packages.xml" : "/p/packages.xml");
+		if(Tag::setof($package,R(new self())->do_get($url)->body())){
+			foreach($package->in("p") as $p){
+				println($p->value());
+			}
+		}
+	}
+	/**
+	 * pear cateogry
+	 * @param Request $req
+	 * @param string $value
+	 */
+	static public function __setup_pear_category__(Request $req,$value){
+		if($value == "") $value = "pear.php.net";
+		$url = trim(self::channel_discover($value),"/")."/c/categories.xml";
+		if(Tag::setof($package,R(new self())->do_get($url)->body())){
+			foreach($package->in("c") as $c){
+				println($c->value());
+			}
+		}
 	}
 }
 ?>
