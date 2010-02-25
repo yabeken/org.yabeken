@@ -171,20 +171,22 @@ class Pea extends Http{
 		throw new Exception("channel [{$domain}] not found");
 	}
 	/**
-	 * pear package install
+	 * PEAR パッケージをインストール
 	 * @param Request $req
 	 * @param string $value
 	 */
 	static public function __setup_pear_install__(Request $req,$value){
-		if($req->is_vars("nodeps")) self::$DEPENDENCY = false;
-		if($req->is_vars("optional")) self::$OPTIONAL = true;
-		if($req->is_vars("state")) self::$PREFFERED_STATE = $req->in_vars("state");
+		if($req->is_vars("path")) def("org.yabeken.service.Pea@path",$req->in_vars("path"));
+		if($req->is_vars("nodeps")) def("org.yabeken.service.Pea@dependency",false);
+		if($req->is_vars("optional")) def("org.yabeken.service.Pea@optional",true);
+		if($req->is_vars("state")) def("org.yabeken.service.Pea@state",$req->in_vars("state"));
+		self::r();
 		if(self::install($value)){
 			println("installed ".$value);
 		}
 	}
 	/**
-	 * pear package
+	 * PEAR パッケージ一覧
 	 * @param Request $req
 	 * @param string $value
 	 */
@@ -198,7 +200,7 @@ class Pea extends Http{
 		}
 	}
 	/**
-	 * pear cateogry
+	 * PEAR カテゴリ一覧
 	 * @param Request $req
 	 * @param string $value
 	 */
@@ -210,6 +212,54 @@ class Pea extends Http{
 				println($c->value());
 			}
 		}
+	}
+	/**
+	 * PEAR パッケージをアップグレード
+	 * @param Request $req
+	 * @param string $value
+	 */
+	static public function __setup_pear_upgrade__(Request $req,$value){
+		if($req->is_vars("path")) def("org.yabeken.service.Pea@pear_path",$req->in_vars("path"));
+		self::r();
+		
+		if(is_dir(self::$PEAR_PATH)){
+			foreach(File::ls(self::$PEAR_PATH) as $file) File::rm($file);
+			foreach(File::dir(self::$PEAR_PATH) as $dir) File::rm($dir);
+		}
+		
+		$package = array();
+		foreach(File::ls(App::path(),true) as $file){
+			if($file->is_ext("php")) $package = array_merge($package,self::find_package($file));
+		}
+		foreach(File::ls(Lib::path(),true) as $file){
+			if($file->is_ext("php")) $package = array_merge($package,self::find_package($file));
+		}
+		foreach(File::ls(Lib::vendors_path(),true) as $file){
+			if($file->is_ext("php")) $package = array_merge($package,self::find_package($file));
+		}
+		
+		$package = array_unique($package);
+		sort($package);
+		foreach($package as $name){
+			if(self::install($name)){
+				println("installed ".$name);
+			}
+		}
+	}
+	static protected function find_package(File $file){
+		if($file->oname() == __CLASS__) return array();
+		$src = File::read($file);
+		$list = array();
+		if(preg_match_all("/[^\w]pear\(([\"\'])(.+?)\\1\)/",$src,$matches)){
+			$list = array_merge($list,$matches[2]);
+		}
+		if(preg_match_all("/[^\w]pear_install\(([\"\'])(.+?)\\1\)/",$src,$matches)){
+			$list = array_merge($list,$matches[2]);
+		}
+		if(preg_match_all("/[^\w]Pea::(?:import|install)\(([\"\'])(.+?)\\1\)/",$src,$matches)){
+			$list = array_merge($list,$matches[2]);
+		}
+		return $list;
 	}
 }
 ?>
