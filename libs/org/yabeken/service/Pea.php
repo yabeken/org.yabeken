@@ -189,6 +189,7 @@ class Pea extends Http{
 	 * @param string $value
 	 */
 	static public function __setup_pear_package__(Request $req,$value){
+		if($value == "") $value = "pear.php.net";
 		$url = trim(self::channel_discover($value),"/") . ($req->is_vars("category") ? "/c/".$req->in_vars("category")."/packages.xml" : "/p/packages.xml");
 		if(Tag::setof($package,R(new self())->do_get($url)->body())){
 			foreach($package->in("p") as $p){
@@ -197,11 +198,12 @@ class Pea extends Http{
 		}
 	}
 	/**
-	 * pear package cateogry
+	 * pear cateogry
 	 * @param Request $req
 	 * @param string $value
 	 */
 	static public function __setup_pear_category__(Request $req,$value){
+		if($value == "") $value = "pear.php.net";
 		$url = trim(self::channel_discover($value),"/")."/c/categories.xml";
 		if(Tag::setof($package,R(new self())->do_get($url)->body())){
 			foreach($package->in("c") as $c){
