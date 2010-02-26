@@ -214,11 +214,11 @@ class Pea extends Http{
 		}
 	}
 	/**
-	 * PEAR パッケージをアップグレード
+	 * PEAR パッケージを再インストール
 	 * @param Request $req
 	 * @param string $value
 	 */
-	static public function __setup_pear_upgrade__(Request $req,$value){
+	static public function __setup_pear_reinstall__(Request $req,$value){
 		if($req->is_vars("path")) def("org.yabeken.service.Pea@pear_path",$req->in_vars("path"));
 		self::r();
 		
