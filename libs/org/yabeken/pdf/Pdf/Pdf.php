@@ -22,6 +22,7 @@ module("model.PdfForm");
  * 
  * @author Kentaro YABE
  * @license New BSD License
+ * @version alpha
  */
 class Pdf extends Object{
 	private $_obj_ = array();
