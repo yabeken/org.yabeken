@@ -8,7 +8,7 @@ module("parser.PdfTplObj");
  */
 class PdfParser extends Object{
 	static protected $__id__ = "type=string,set=false";
-	static protected $__obj__ = "type=PdfTplObj[]";
+	static protected $__obj__ = "type=PdfTplObj[],set=false";
 	protected $id;
 	protected $obj;
 	
@@ -125,7 +125,6 @@ class PdfParser extends Object{
 		if(!isset($this->_xref_[$id])) throw new PdfException(sprintf("object id not found [%s]",$id));
 		
 		$this->_parsing_obj_ = $obj = new PdfTplObj();
-		$obj->pid($id);
 		$obj->parser_id($this->id);
 		
 		if($rawdata){
