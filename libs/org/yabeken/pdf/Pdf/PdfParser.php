@@ -24,7 +24,7 @@ class PdfParser extends Object{
 	protected function __new__($filename){
 		$this->id = md5($filename);
 		$this->_file_ = new FileStream($filename,"rb");
-		$this->_parse_();
+		$this->parse();
 	}
 	/**
 	 * PDFオブジェクトをエクスポートする
@@ -32,7 +32,7 @@ class PdfParser extends Object{
 	 * @return PdfTplObj
 	 */
 	public function export_obj($id){
-		return $this->_get_obj_($id,true);
+		return $this->get_obj($id,true);
 	}
 	/**
 	 * ページをエクスポートする
@@ -41,13 +41,13 @@ class PdfParser extends Object{
 	 */
 	public function page($page_no){
 		if(!isset($this->_page_[$page_no])) throw new PdfException("Page not found");
-		$page = $this->_get_obj_($this->_page_[$page_no]);
+		$page = $this->get_obj($this->_page_[$page_no]);
 		return $page;
 	}
 	protected function __in_obj__($id){
-		return $this->_get_obj_($id);
+		return $this->get_obj($id);
 	}
-	private function _parse_(){
+	private function parse(){
 		//trailer
 		$buf = "";
 		$this->_file_->seek(0,FileStream::SEEK_END);
@@ -56,11 +56,11 @@ class PdfParser extends Object{
 		}
 		//startxref
 		if(!preg_match("/startxref(?:\r|\n|\r\n)(\d+)(?:\r|\n)/",$buf,$m)) throw new PdfException("startxref not found");
-		$this->_parse_xref_(intval($m[1]));
+		$this->parse_xref(intval($m[1]));
 		//pages
-		$this->_parse_pages_();
+		$this->parse_pages();
 	}
-	private function _parse_xref_($startxref){
+	private function parse_xref($startxref){
 		$this->_file_->offset($startxref);
 		if(!preg_match("/^xref/",$this->_file_->read_line(true))) throw new PdfException("invalid xref");
 		list(,$num) = explode(" ",trim($this->_file_->read_line(true)));
@@ -92,25 +92,25 @@ class PdfParser extends Object{
 		}
 		//prev
 		if(preg_match("@/Prev\s+(\d+)@",$trailer,$m)){
-			$this->_parse_xref_(intval($m[1]));
+			$this->parse_xref(intval($m[1]));
 		}
 		//root
 		if(is_null($this->_catalog_) && preg_match("@/Root\s+(\d+) 0 R@",$trailer,$m)){
-			$this->_catalog_ = $this->_get_obj_(intval($m[1]));
+			$this->_catalog_ = $this->get_obj(intval($m[1]));
 		}
 	}
-	private function _parse_pages_(){
-		$pages = $this->_get_obj_($this->_catalog_->in_dictionary("Pages")->id());
+	private function parse_pages(){
+		$pages = $this->get_obj($this->_catalog_->in_dictionary("Pages")->id());
 		$page_no = 1;
 		foreach($pages->in_dictionary("Kids") as $ref){
 			$this->_page_[$page_no++] = $ref->id();
 		}
 	}
-	private function _get_obj_($id,$rawdata=false){
+	private function get_obj($id,$rawdata=false){
 		if(isset($this->obj[$id])) return $this->obj[$id];
-		return $this->obj[$id] = $this->_parse_obj_($id,$rawdata);
+		return $this->obj[$id] = $this->parse_obj($id,$rawdata);
 	}
-	private function _read_obj_($id){
+	private function read_obj($id){
 		if(!isset($this->_xref_[$id])) throw new PdfException(sprintf("object id not found [%s]",$id));
 		$cur_offset = $this->_file_->offset();
 		$this->_file_->offset($this->_xref_[$id]);
@@ -121,7 +121,7 @@ class PdfParser extends Object{
 		$this->_file_->offset($cur_offset);
 		return $buf;
 	}
-	private function _parse_obj_($id,$rawdata=false){
+	private function parse_obj($id,$rawdata=false){
 		if(!isset($this->_xref_[$id])) throw new PdfException(sprintf("object id not found [%s]",$id));
 		
 		$this->_parsing_obj_ = $obj = new PdfTplObj();
@@ -130,7 +130,7 @@ class PdfParser extends Object{
 		
 		if($rawdata){
 			//手抜き参照チェック
-			$rawstr = $this->_read_obj_($id);
+			$rawstr = $this->read_obj($id);
 			$obj->rawdata(true);
 			$obj->value($rawstr);
 			if(preg_match_all("/(\d+)\s+0\s+R/",$rawstr,$matches)!==false){
@@ -141,14 +141,14 @@ class PdfParser extends Object{
 		}else{
 			if(!isset($this->_xref_[$id])) throw new PdfException(sprintf("object id not found [%s]",$id));
 			$this->_file_->offset($this->_xref_[$id]+strlen("{$id} 0 obj"));
-			$this->_skip_whitespace_();
-			$this->_parse_value_($obj);
+			$this->skip_whitespace();
+			$this->parse_value($obj);
 			if(($offset = $this->_file_->search("stream",false,32)) !== false){
 				$obj->stream(true);
 				$this->_file_->offset($offset + 6);
-				$this->_skip_whitespace_();
+				$this->skip_whitespace();
 				$length = $obj->in_dictionary("Length");
-				$length = $length instanceof PdfRef ? intval(trim($this->_read_obj_($length->id()))) : $length;
+				$length = $length instanceof PdfRef ? intval(trim($this->read_obj($length->id()))) : $length;
 				$obj->dictionary("Length",$length);
 				//TODO 圧縮の種類
 				$obj->value(gzuncompress($this->_file_->read($length)));
@@ -158,8 +158,8 @@ class PdfParser extends Object{
 		$this->_parsing_obj_ = null;
 		return $obj;
 	}
-	private function _parse_value_($result=null){
-		$token = $this->_read_token_();
+	private function parse_value($result=null){
+		$token = $this->read_token();
 		if($token instanceof PdfObj) return $token;
 		switch($token){
 			case "<<":
@@ -167,22 +167,22 @@ class PdfParser extends Object{
 				$pobj = $this->_parsing_obj_;
 				$this->_parsing_obj_ = $result;
 				while(true){
-					$tk = $this->_read_token_();
+					$tk = $this->read_token();
 					if(is_string($tk) && $tk == ">>") break;
-					$result->dictionary($this->_parse_value_(),$this->_parse_value_());
+					$result->dictionary($this->parse_value(),$this->parse_value());
 				}
 				$this->_parsing_obj_ = $pobj;
 				return $result;
 			case "[":
 				$result = array();
 				while(true){
-					$tk = $this->_read_token_();
+					$tk = $this->read_token();
 					if(is_string($tk) && $tk == "]") break;
 					if(!($tk instanceof PdfObj) && strpos(self::$_delimiter_,$tk)!==false){
 						$this->_file_->seek(-1 * strlen($tk));
-						$tk = $this->_parse_value_();
+						$tk = $this->parse_value();
 					}
-					$result[] = $this->_normalize_($tk);
+					$result[] = $this->normalize($tk);
 				}
 				return $result;
 			case "(":
@@ -201,15 +201,15 @@ class PdfParser extends Object{
 				$r = $token.$this->_file_->read($this->_file_->search(self::$_whitespace_.self::$_delimiter_,true) - $this->_file_->offset());
 				return $r;
 			default:
-				$value = $this->_normalize_($token);
+				$value = $this->normalize($token);
 				if($result instanceof PdfObj){
 					$result->value($value);
 				}
 				return $value;
 		}
 	}
-	private function _read_token_(){
-		$this->_skip_whitespace_();
+	private function read_token(){
+		$this->skip_whitespace();
 		$token  = $this->_file_->read(1);
 		switch($token){
 			case "<":
@@ -227,11 +227,11 @@ class PdfParser extends Object{
 				return $token;
 			case "%":
 				$this->_file_->read_line(true);
-				return $this->_read_token_();
+				return $this->read_token();
 			default:
 				$token .= $this->_file_->read($this->_file_->search(self::$_whitespace_.self::$_delimiter_,true) - $this->_file_->offset());
 				$offset = $this->_file_->offset();
-				if(is_numeric($token) && $this->_read_token_() === "0" && $this->_read_token_() === "R"){
+				if(is_numeric($token) && $this->read_token() === "0" && $this->read_token() === "R"){
 					$ref = new PdfRef("id={$token},parser_id={$this->id}");
 					$this->_parsing_obj_->ref($ref);
 					return $ref;
@@ -240,7 +240,7 @@ class PdfParser extends Object{
 				return $token;
 		}
 	}
-	private function _normalize_($var){
+	private function normalize($var){
 		if(is_numeric($var)) return ctype_digit($var) ? intval($var) : floatval($var);
 		if(is_string($var)){
 			if(strlen($var) == 0) return;
@@ -251,7 +251,7 @@ class PdfParser extends Object{
 		}
 		return $var;
 	}
-	private function _skip_whitespace_(){
+	private function skip_whitespace(){
 		while(!$this->_file_->eof()){
 			if(strpos(self::$_whitespace_,$this->_file_->read(1))===false){
 				$this->_file_->seek(-1);
