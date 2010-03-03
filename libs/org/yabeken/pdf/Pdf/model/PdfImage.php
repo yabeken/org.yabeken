@@ -1,8 +1,7 @@
 <?php
-module("PdfObj");
 /**
  * Image
- * @author Kentaro YABE
+ * @author yabeken
  */
 class PdfImage extends PdfObj{
 	protected $stream = true;

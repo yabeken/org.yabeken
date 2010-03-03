@@ -1,8 +1,7 @@
 <?php
-module("PdfObj");
 /**
  * Page
- * @author Kentaro YABE
+ * @author yabeken
  */
 class PdfPage extends PdfObj{
 	static protected $__rotation__ = "type=choice(tate,yoko,portrait,landscape)";

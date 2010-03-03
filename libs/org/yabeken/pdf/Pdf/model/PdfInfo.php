@@ -1,9 +1,8 @@
 <?php
-module("PdfObj");
 import("org.rhaco.lang.DateUtil");
 /**
  * Info
- * @author Kenato YABE
+ * @author yabeken
  */
 class PdfInfo extends PdfObj {
 	static protected $__Title__ = "type=string";

@@ -1,8 +1,7 @@
 <?php
 /**
- * Pdf Annotation
+ * Annotation
  * @author yabeken
- *
  */
 class PdfAnnot extends PdfObj{
 	static protected $__F__ = "type=integer";

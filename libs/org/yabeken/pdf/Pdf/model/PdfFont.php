@@ -1,7 +1,10 @@
 <?php
-module("PdfObj");
+/**
+ * Font
+ * @author yabeken
+ */
 class PdfFont extends PdfObj{
-	static protected $__half_width__ = "type=integer";
+	static protected $__half_width__ = "type=integer,set=false";
 	protected $half_width = 500;
 	
 	static protected $__Type__ = "type=name";
@@ -49,23 +52,22 @@ class PdfFont extends PdfObj{
 			return $r;
 		}
 		
-//		if(method_exists($this,"__calc_width__")) return $this->__calc_width__($str);
-		
+		//TODO
 		if($this->is_Widths(ord($str))) return $this->in_Widths(ord($str)) / 1000;
 		
-//		if(preg_match("/^\xef(?:\xbd[\xa1-\xbf]|\xbe[\x80-\x9f])$/",$str)){
-//			return $this->half_width();
-//		}
-//		
-//		if($this->DescendantFonts){
-//			foreach($this->DescendantFonts as $font){
-//				$width = $font->str_width($str);
-//				if(is_numeric($width)){
-//					return $width;
-//				}
-//			}
-//		}
-//		return $this->is_DW() ? $this->DW() / 1000 : 0;
+		if(preg_match("/^\xef(?:\xbd[\xa1-\xbf]|\xbe[\x80-\x9f])$/",$str)){
+			return $this->half_width();
+		}
+
+		if($this->DescendantFonts){
+			foreach($this->DescendantFonts as $font){
+				$width = $font->calc_width($str);
+				if(is_numeric($width)){
+					return $width;
+				}
+			}
+		}
+		return $this->is_DW() ? $this->DW() / 1000 : 0;
 	}
 	final public function encode($str){
 		return mb_convert_encoding($str,"UTF-16BE","UTF-8");

@@ -1,6 +1,8 @@
 <?php
-module("PdfObj");
-module("model.PdfPages");
+/**
+ * Catalog
+ * @author yabeken
+ */
 class PdfCatalog extends PdfObj{
 	static protected $__Type__ = "type=name";
 	static protected $__Pages__ = "type=PdfPages";

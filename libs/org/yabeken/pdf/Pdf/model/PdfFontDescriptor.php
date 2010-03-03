@@ -1,5 +1,8 @@
 <?php
-module("PdfObj");
+/**
+ * Font Descriptor
+ * @author yabeken
+ */
 class PdfFontDescriptor extends PdfObj {
 	protected $Type = "/FontDescriptor";
 	protected $FontName;

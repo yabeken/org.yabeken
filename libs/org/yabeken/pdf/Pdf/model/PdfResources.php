@@ -1,8 +1,7 @@
 <?php
-module("PdfObj");
 /**
  * Resources
- * @author Kentaro YABE
+ * @author yabeken
  */
 class PdfResources extends PdfObj{
 	static protected $__Font__ = "type=dictionary";

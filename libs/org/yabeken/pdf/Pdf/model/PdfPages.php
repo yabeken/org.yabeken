@@ -1,8 +1,7 @@
 <?php
-module("PdfObj");
 /**
  * Pages
- * @author Kentaro YABE
+ * @author yabeken
  */
 class PdfPages extends PdfObj{
 	static protected $__Type__ = "type=name";
