@@ -53,14 +53,11 @@ class PdfObj extends Object{
 			if($var == "") return "null";
 			if($var[0] == "/") return $var;
 			if(preg_match("/^\<(?:[0-9a-f]{2})+\>$/i",$var)) return $var;
-			return sprintf("(%s)",self::escape($var));
+			return sprintf("(%s)",str_replace(array("\\","(",")","\r"),array("\\\\","\\(","\\)","\\r"),$var));
 		}else if(is_null($var)){
 			return "null";
 		}
 		return str($var);
-	}
-	final static protected function escape($str){
-		return str_replace(array("\\","(",")","\r"),array("\\\\","\\(","\\)","\\r"),$str);
 	}
 	final protected function __new__($dict=null){
 		foreach($this->props() as $name){

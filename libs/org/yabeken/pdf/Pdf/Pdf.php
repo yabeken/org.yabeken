@@ -4,14 +4,15 @@ import("org.yabeken.io.FileStream");
 module("PdfException");
 module("PdfObj");
 module("PdfParser");
-module("model.PdfInfo");
 module("model.PdfCatalog");
-module("model.PdfResources");
-module("model.PdfPage");
 module("model.PdfFont");
 module("model.PdfFontDescriptor");
-module("model.PdfImage");
 module("model.PdfForm");
+module("model.PdfImage");
+module("model.PdfInfo");
+module("model.PdfPage");
+module("model.PdfPages");
+module("model.PdfResources");
 /**
  * PDF
  * 
@@ -381,7 +382,7 @@ class Pdf extends Object{
 		$buf[] = sprintf("/RF-%s %s Tf ",$this->font,$this->font_size);
 		$buf[] = sprintf("%.3f %.3f %.3f rg ",$this->in_font_color("r")/255,$this->in_font_color("g")/255,$this->in_font_color("b")/255);
 		$buf[] = sprintf("%s %s Td ",$x, $y);
-		$buf[] = sprintf("(%s) Tj ",$this->_cur_font_->encode($str));
+		$buf[] = sprintf("(%s) Tj ",str_replace(array("\\","(",")","\r"),array("\\\\","\\(","\\)","\\r"),$this->_cur_font_->encode($str)));
 		$buf[] = "Q ET\n";
 		$this->write_contents(implode("\n",$buf));
 		
