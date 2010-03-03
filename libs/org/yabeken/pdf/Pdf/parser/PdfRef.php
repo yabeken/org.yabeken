@@ -1,7 +1,7 @@
 <?php
 /**
- * 参照モデル
- * @author Kentaro YABE
+ * PDF Reference Object
+ * @author yabeken
  */
 class PdfRef extends PdfObj{
 	static protected $__parser_id__ = "type=string";

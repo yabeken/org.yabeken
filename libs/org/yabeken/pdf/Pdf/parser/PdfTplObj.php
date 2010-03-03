@@ -1,7 +1,7 @@
 <?php
 /**
- * テンプレートオブジェクト
- * @author Kentaro YABE
+ * PDF Template Object
+ * @author yabeken
  */
 class PdfTplObj extends PdfObj{
 	static protected $__pid__ = "type=integer";
