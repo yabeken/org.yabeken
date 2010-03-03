@@ -746,7 +746,7 @@ class Pdf extends Object{
 			}else{
 				$tpl->value($parser->in_obj($contents->id())->value());
 			}
-			$tpl->dictionary("Resources",$this->_import_resources_($page));
+			$tpl->dictionary("Resources",$this->import_resources($page));
 			$tpl->dictionary("BBox",$page->in_dictionary("MediaBox"));
 			$this->add_xobject("RT-".$tid,$tpl);
 		}
@@ -755,49 +755,49 @@ class Pdf extends Object{
 		$p->in_dictionary("Contents")->value(sprintf("q /RT-%d Do Q\n",$this->_template_[$page->uid()]));
 		return $this->add_obj($p);
 	}
-	private function _import_resources_(PdfTplObj $page){
+	private function import_resources(PdfTplObj $page){
 		$resources = $page->in_dictionary("Resources");
 		if($resources instanceof PdfRef){
-			return $this->_import_ref_($this->_import_obj_($page->in_dictionary("Resources")));
+			return $this->import_ref($this->import_obj($page->in_dictionary("Resources")));
 		}else{
 			$search = $replace = array();
 			foreach($resources->dictionary() as $obj){
 				if($obj instanceof PdfTplObj){
 					foreach($obj->ref() as $ref){
-						$o = $this->_import_obj_($ref);
+						$o = $this->import_obj($ref);
 						$search[] = sprintf("%d 0 R",$ref->id());
 						$replace[] = sprintf("%d 0 R",$o->id());
-						$this->_import_ref_($o);
+						$this->import_ref($o);
 					}
 				}else if($obj instanceof PdfRef){
-					$o = $this->_import_obj_($obj);
+					$o = $this->import_obj($obj);
 					$search[] = sprintf("%d 0 R",$obj->id());
 					$replace[] = sprintf("%d 0 R",$o->id());
-					$this->_import_ref_($o);
+					$this->import_ref($o);
 				}
 			}
 			$result = new PdfObj("rawdata=true");
-			$result->value($this->_replace_refs_($search,$replace,$resources->str()));
+			$result->value($this->replace_refs($search,$replace,$resources->str()));
 			return $result;
 		}
 	}
-	private function _import_ref_(PdfTplObj $obj){
+	private function import_ref(PdfTplObj $obj){
 		$search = $replace = array();
 		foreach($obj->ref() as $ref){
-			$o = $this->_import_obj_($ref);
+			$o = $this->import_obj($ref);
 			$search[] = sprintf("%d 0 R",$ref->id());
 			$replace[] = sprintf("%d 0 R",$o->id());
-			$this->_import_ref_($o);
+			$this->import_ref($o);
 		}
-		$obj->value($this->_replace_refs_($search,$replace,$obj->value()));
+		$obj->value($this->replace_refs($search,$replace,$obj->value()));
 		return $obj;
 	}
-	private function _replace_refs_(array $search,array $replace,$subject){
+	private function replace_refs(array $search,array $replace,$subject){
 		if(!$search || !$replace) return $subject;
 		$u = array_map("md5",$search);
 		return str_replace(array_merge($search,$u),array_merge($u,$replace),$subject);
 	}
-	private function _import_obj_(PdfRef $ref){
+	private function import_obj(PdfRef $ref){
 		return $this->add_obj(self::$_parser_[$ref->parser_id()]->export_obj($ref->id()));
 	}
 }
