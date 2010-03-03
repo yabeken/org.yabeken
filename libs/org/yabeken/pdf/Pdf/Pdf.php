@@ -403,12 +403,22 @@ class Pdf extends Object{
 		$this->draw_path();
 		if($style !== null) $this->pop_style();
 	}
+	/**
+	 * 矩形を描画
+	 * @param number $x
+	 * @param number $y
+	 * @param number $width
+	 * @param number $height
+	 * @param dict $style
+	 */
 	public function rectangle($x,$y,$width,$height,$style=null){
 		if($style !== null) $this->push_style($style);
+		$this->add_rectangle_path($x,$y,$width,$height);
+		$this->draw_path();
 		if($style !== null) $this->pop_style();
 	}
 	/**
-	 * パスを開始する
+	 * パスの始点を追加
 	 * @param number $x
 	 * @param number $y
 	 * @param dict $style
@@ -417,6 +427,15 @@ class Pdf extends Object{
 		$this->_path_ = array("q n ".$this->get_path_style());
 		$this->_path_[] = sprintf("%.3f %.3f m",$x,$y);
 	}
+	/**
+	 * ベジエ曲線パスを追加
+	 * @param number $x1
+	 * @param number $y1
+	 * @param number $x2
+	 * @param number $y2
+	 * @param number $x3
+	 * @param number $y3
+	 */
 	public function add_bezier_path($x1,$y1,$x2,$y2,$x3,$y3){
 		if(!$this->_path_) throw new PdfException("path not begin");
 		if($x1 === null && $y1 === null){
@@ -427,20 +446,37 @@ class Pdf extends Object{
 			$this->_path_[] = sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c",$x1,$y1,$x2,$y2,$x3,$y3);
 		}
 	}
+	/**
+	 * 直線パスを追加
+	 * @param number $x
+	 * @param number $y
+	 */
 	public function add_line_path($x,$y){
 		if(!$this->_path_) throw new PdfException("path not begin");
 		$this->_path_[] = sprintf("%.3f %.3f l",$x,$y);
 	}
+	/**
+	 * 矩形パスを追加
+	 * @param number $x
+	 * @param number $y
+	 * @param number $width
+	 * @param number $height
+	 */
 	public function add_rectangle_path($x,$y,$width,$height){
 		if(!$this->_path_) throw new PdfException("path not begin");
 		$this->_path_[] = sprintf("%.3f %.3f %.3f %.3f re",$x,$y,$width,$height);
 	}
-	
+	/**
+	 * 現在のパスを描画
+	 */
 	public function draw_path(){
 		if(!$this->_path_) throw new PdfException("path not begin");
 		$this->write_contents(sprintf("%s %s%s Q\n",implode(" ",$this->_path_),$this->stroke == "nofill" ? "s" : "b",$this->stroke == "evenodd" ? "*" : ""));
 		$this->_path_ = array();
 	}
+	/**
+	 * 現在のパススタイルを取得
+	 */
 	protected function get_path_style(){
 		$r = array();
 		$r[] = sprintf("%.3f %.3f %.3f RG",$this->in_color("r")/255,$this->in_color("g")/255,$this->in_color("b")/255);
