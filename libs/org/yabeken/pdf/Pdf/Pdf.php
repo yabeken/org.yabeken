@@ -17,7 +17,6 @@ module("model.PdfResources");
  * PDF
  * 
  * TODO テンプレートの登録と適用
- * TODO テンプレートとPDF間のリソースのシームレスな使用
  * TODO 画像の回転ができてない予感？
  * TODO ページ出力時等のイベント処理
  * 
