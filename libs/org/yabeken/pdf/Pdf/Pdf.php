@@ -19,6 +19,7 @@ module("model.PdfResources");
  * TODO テンプレートの登録と適用
  * TODO 画像の回転ができてない予感？
  * TODO ページ出力時等のイベント処理
+ * TODO 太字と斜体字
  * 
  * @author Kentaro YABE
  * @license New BSD License
@@ -43,10 +44,10 @@ class Pdf extends Object{
 	
 	static protected $__font__ = "type=string,style=true";
 	static protected $__font_size__ = "type=number,style=true";
-	static protected $__font_color__ = "type=string,style=true";
+	static protected $__color__ = "type=string,style=true";
 	protected $font;
 	protected $font_size = 10.5;
-	protected $font_color = "#000000";
+	protected $color = "#000000";
 	
 	static protected $__align__ = "type=choice(normal,left,right,center,justify),style=true";
 	static protected $__rotate__ = "type=number,style=true";
@@ -56,6 +57,11 @@ class Pdf extends Object{
 	protected $rotate;
 	protected $width;
 	protected $height;
+	
+//	static protected $__italic__ = "type=integer";
+//	static protected $__bold__ = "type=integer";
+//	protected $italic = 0;
+//	protected $bold = 0;
 	
 	static protected $__char_space__ = "type=number,style=true";
 	static protected $__leading__ = "type=number,style=true";
@@ -98,9 +104,7 @@ class Pdf extends Object{
 	 */
 	protected $word_space;
 	
-	static protected $__color__ = "type=string,style=true";
 	static protected $__background_color__ = "type=string,style=true";
-	protected $color = "#000000";
 	protected $background_color;
 	
 	static protected $__line_width__ = "type=number,style=true";
@@ -379,7 +383,7 @@ class Pdf extends Object{
 		if($this->is_scale()) $buf[] = sprintf("%s Tz ",$this->scale());
 		if($this->is_word_space()) $buf[] = sprintf("%s Tw ",$this->word_space());
 		$buf[] = sprintf("/RF-%s %s Tf ",$this->font,$this->font_size);
-		$buf[] = sprintf("%.3f %.3f %.3f rg ",$this->in_font_color("r")/255,$this->in_font_color("g")/255,$this->in_font_color("b")/255);
+		$buf[] = sprintf("%.3f %.3f %.3f rg ",$this->in_color("r")/255,$this->in_color("g")/255,$this->in_color("b")/255);
 		$buf[] = sprintf("%s %s Td ",$x, $y);
 		$buf[] = sprintf("(%s) Tj ",str_replace(array("\\","(",")","\r"),array("\\\\","\\(","\\)","\\r"),$this->_cur_font_->encode($str)));
 		$buf[] = "Q ET\n";
@@ -494,11 +498,11 @@ class Pdf extends Object{
 	public function style($dict){
 		/***
 			$pdf = new Pdf();
-			$pdf->style("font_color=#0f0f0f,font_size=24");
-			eq("#0f0f0f",$pdf->font_color());
+			$pdf->style("color=#0f0f0f,font_size=24");
+			eq("#0f0f0f",$pdf->color());
 			eq(24,$pdf->font_size());
-			$pdf->style("font_color=,font_size=");
-			eq("#000000",$pdf->font_color());
+			$pdf->style("color=,font_size=");
+			eq("#000000",$pdf->color());
 			eq(10.5,$pdf->font_size());
 			try{
 				$pdf->style("hoge=>fuga");
@@ -631,49 +635,6 @@ class Pdf extends Object{
 		 */
 		$this->font_size(10.5);
 	}
-	protected function __set_font_color__($value){
-		/***
-			$pdf = new Pdf();
-			$pdf->font_color("#123456");
-			eq("#123456",$pdf->font_color());
-		 */
-		if(!preg_match("/^#[0-9a-f]{6}$/i",$value)) throw new PdfException("invalid color");
-		$this->font_color = $value;
-		return $this->font_color;
-	}
-	protected function __in_font_color__($e){
-		/***
-			$pdf = new Pdf();
-			$pdf->font_color("#123456");
-			eq(18,$pdf->in_font_color("r"));
-			eq(52,$pdf->in_font_color("g"));
-			eq(86,$pdf->in_font_color("b"));
-		 */
-		switch($e){
-			case "r": return hexdec(substr($this->font_color,1,2));
-			case "g": return hexdec(substr($this->font_color,3,2));
-			case "b": return hexdec(substr($this->font_color,5,2));
-		}
-		throw new PdfException("invalid RGB color element");
-	}
-	protected function __rm_font_color__(){
-		/***
-			$pdf = new Pdf();
-			$pdf->font_color("#ffffff");
-			$pdf->rm_font_color();
-			eq("#000000",$pdf->font_color());
-		 */
-		$this->font_color = "#000000";
-	}
-	protected function __rm_align__(){
-		/***
-			$pdf = new Pdf();
-			$pdf->align("center");
-			$pdf->rm_align();
-			eq("normal",$pdf->align());
-		 */
-		$this->align("normal");
-	}
 	protected function __set_color__($value){
 		/***
 			$pdf = new Pdf();
@@ -702,11 +663,20 @@ class Pdf extends Object{
 	protected function __rm_color__(){
 		/***
 			$pdf = new Pdf();
-			$pdf->font_color("#ffffff");
-			$pdf->rm_font_color();
-			eq("#000000",$pdf->font_color());
+			$pdf->color("#ffffff");
+			$pdf->rm_color();
+			eq("#000000",$pdf->color());
 		 */
 		$this->color = "#000000";
+	}
+	protected function __rm_align__(){
+		/***
+			$pdf = new Pdf();
+			$pdf->align("center");
+			$pdf->rm_align();
+			eq("normal",$pdf->align());
+		 */
+		$this->align("normal");
 	}
 	// Parser 
 	/**
