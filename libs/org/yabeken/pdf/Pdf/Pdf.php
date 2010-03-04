@@ -192,20 +192,14 @@ class Pdf extends Object{
 		//TODO signature check
 		$stream->seek(8);
 		while(true){
-			$len = unpack('Ni',$stream->read(4));
-			$len = $len["i"];
+			$len = $stream->read_uint32_be();
 			switch($stream->read(4)){
 				case "IHDR":
-					//width
-					$w = unpack('Ni',$stream->read(4));
-					$image->Width($w["i"]);
-					//height
-					$h = unpack('Ni',$stream->read(4));
-					$image->Height($h["i"]);
-					//bit per component
-					$image->BitsPerComponent(ord($stream->read(1)));
+					$image->Width($stream->read_uint32_be());
+					$image->Height($stream->read_uint32_be());
+					$image->BitsPerComponent($stream->read_uint8());
 					//color space
-					$cs = ord($stream->read(1));
+					$cs = $stream->read_uint8();
 					switch($cs){
 						case 0: //grayscale
 							$image->ColorSpace("/DeviceGray");
@@ -218,12 +212,8 @@ class Pdf extends Object{
 						default:
 							throw new PdfException("alpha channel is not supported");
 					}
-					//compression
-					$stream->seek(1);
-					//filter
-					$stream->seek(1);
-					//interlace
-					$stream->seek(1);
+					//compression,filter,interlace
+					$stream->seek(3);
 					
 					$decodeParms = new PdfObj();
 					$decodeParms->dictionary("Predictor",15);
