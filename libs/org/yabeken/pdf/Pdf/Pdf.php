@@ -234,7 +234,7 @@ class Pdf extends Object{
 					}else if($image->ColorSpace() == "/DeviceRGB"){
 						$image->Mask(array(ord(substr($t,1,1)),ord(substr($t,1,1)),ord(substr($t,3,1)),ord(substr($t,3,1)),ord(substr($t,5,1)),ord(substr($t,5,1))));
 					}else{
-						$pos = strpos(chr(0));
+						$pos = strpos($trns,chr(0));
 						if($pos !== false){
 							$image->Mask(array($pos,$pos));
 						}
@@ -242,9 +242,9 @@ class Pdf extends Object{
 					break;
 				case "IDAT": //image data
 					$image->value($stream->read($len));
-					break(2);
+					break;
 				case "IEND":
-					throw new PdfException(sprintf("unexpected IEND [%s]",$name));
+					break(2);
 				default:
 					$stream->seek($len);
 					break;
