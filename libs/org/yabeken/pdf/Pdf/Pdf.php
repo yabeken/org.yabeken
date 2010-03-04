@@ -161,10 +161,10 @@ class Pdf extends Object{
 	}
 	/**
 	 * フォント追加
-	 * @param string $name
 	 * @param PdfFont $font
 	 */
-	final protected function add_font($name,PdfObj $font){
+	final public function add_font(PdfObj $font){
+		$name = "RF-".get_class($font);
 		if(!$this->_resources_->Font()->is_dictionary($name)){
 			$this->_resources_->Font()->dictionary($name,$this->add_obj($font));
 		}
@@ -612,7 +612,7 @@ class Pdf extends Object{
 		if(empty($value)) return;
 		$class = ($value instanceof PdfFont) ? get_class($value) : $value;
 		if(!class_exists($class)) throw new PdfException("font not found [{$class}]");
-		$this->_cur_font_ = $this->add_font("RF-".$class,$value instanceof PdfFont ? $value : new $class());
+		$this->_cur_font_ = $this->add_font($value instanceof PdfFont ? $value : new $class());
 		$this->font = $class;
 		return $this->font;
 	}
