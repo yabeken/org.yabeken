@@ -20,6 +20,7 @@ module("model.PdfResources");
  * TODO 画像の回転ができてない予感？
  * TODO ページ出力時等のイベント処理
  * TODO 太字と斜体字
+ * TODO メモリ節約のためのバイナリファイルの扱い
  * 
  * @author Kentaro YABE
  * @license New BSD License
