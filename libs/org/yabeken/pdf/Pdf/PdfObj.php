@@ -148,8 +148,7 @@ class PdfObj extends Object{
 		if($this->rawdata){
 			$buf .= $this->value."\n";
 		}else if($this->stream){
-			$stream = $this->value;
-			if($this->has_module("compress")) $stream = $this->call_module("compress",$stream,$this);
+			$stream = gzcompress($this->value);
 			$this->dictionary("Length",$length = strlen($stream));
 			$buf .= $this->__fm_dictionary__("\n")."\n";
 			$buf .= "stream\n";
