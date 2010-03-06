@@ -127,6 +127,16 @@ class Pdf extends Object{
 //	protected $flatness;
 //	protected $graphic_state;
 	
+	final protected function __init__(){
+		$this->_resources_ = $this->add_obj(new PdfResources());
+		$this->_catalog_ = $this->add_obj(new PdfCatalog());
+		$this->info = $this->add_obj(new PdfInfo());
+		foreach($this->props() as $name){
+			if($this->a($name,"style")===true){
+				$this->_style_props_[] = $name;
+			}
+		}
+	}
 	/**
 	 * 現在のページコンテンツに書き込む
 	 * @param $rawdata
@@ -549,16 +559,6 @@ class Pdf extends Object{
 	 */
 	protected function pop_style(){
 		$this->style(array_pop($this->_style_));
-	}
-	final protected function __init__(){
-		$this->_resources_ = $this->add_obj(new PdfResources());
-		$this->_catalog_ = $this->add_obj(new PdfCatalog());
-		$this->info = $this->add_obj(new PdfInfo());
-		foreach($this->props() as $name){
-			if($this->a($name,"style")===true){
-				$this->_style_props_[] = $name;
-			}
-		}
 	}
 	final protected function __str__(){
 		$xref = array();
