@@ -408,7 +408,7 @@ class Pdf extends Object{
 		if(!is_null($style)) $this->style($current_style);
 	}
 	/**
-	 * 直線を描画
+	 * 直線描画
 	 * @param number $x1
 	 * @param number $y1
 	 * @param number $x2
@@ -417,13 +417,13 @@ class Pdf extends Object{
 	 */
 	public function line($x1,$y1,$x2,$y2,$style=null){
 		if($style !== null) $this->push_style($style);
-		$this->begin_path($x1,$y1,$style);
+		$this->begin_path($x1,$y1);
 		$this->add_line_path($x2,$y2);
 		$this->draw_path();
 		if($style !== null) $this->pop_style();
 	}
 	/**
-	 * 矩形を描画
+	 * 矩形描画
 	 * @param number $x
 	 * @param number $y
 	 * @param number $width
@@ -435,6 +435,33 @@ class Pdf extends Object{
 		$this->add_rectangle_path($x,$y,$width,$height);
 		$this->draw_path();
 		if($style !== null) $this->pop_style();
+	}
+	/**
+	 * 楕円描画
+	 * @param number $x
+	 * @param number $y
+	 * @param number $rx
+	 * @param number $ry
+	 * @param dict $style
+	 */
+	public function ellipse($x,$y,$rx,$ry,$style=null){
+		throw new Exception("under construction");
+		//TODO
+//		if($style !== null) $this->push_style($style);
+//		$this->begin_path($x,$y);
+//		
+//		$this->draw_path();
+//		if($style !== null) $this->pop_style();
+	}
+	/**
+	 * 円描画
+	 * @param number $x
+	 * @param number $y
+	 * @param number $r
+	 * @param dict $style
+	 */
+	public function circle($x,$y,$r,$style=null){
+		$this->ellipse($x,$y,$r,$r,$style);
 	}
 	/**
 	 * パスの始点を追加
