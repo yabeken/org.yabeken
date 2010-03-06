@@ -302,15 +302,30 @@ class Pdf extends Object{
 	 * 画像描画
 	 * @param number $x
 	 * @param number $y
-	 * @param string $name
+	 * @param string $name_or_filename
 	 * @param string $style
 	 */
-	public function image($x,$y,$name,$style=null){
-		$current_style = is_null($style) ? "" : $this->current_style();
-		if(!is_null($style)) $this->style($style);
-		
+	public function image($x,$y,$name_or_filename,$style=null){
+		$name = $name_or_filename;
+		if(File::exist($name_or_filename)){
+			$name = md5($name_or_filename);
+			$file = new File($name_or_filename);
+			switch(strtolower($file->ext())){
+				case ".png":
+					$this->add_png($name,$file->get());
+					break;
+				case ".jpg":
+				case ".jpeg":
+					$this->add_jpeg($name,$file->get());
+					break;
+				default: throw new PdfException(sprintf("unsupported image file [%s]",$name_or_filename));
+			}
+		}
 		if(!$this->_resources_->XObject()->is_dictionary("RI-".$name)) throw new PdfException(sprintf("Image not found [%s]",$name));
 		$image = $this->_resources_->XObject()->in_dictionary("RI-".$name);
+
+		$current_style = is_null($style) ? "" : $this->current_style();
+		if(!is_null($style)) $this->style($style);
 		
 		//scale
 		$width = $this->is_width() ? $this->width() : $image->Width();
