@@ -149,6 +149,7 @@ class PdfObj extends Object{
 			$buf .= $this->value."\n";
 		}else if($this->stream){
 			$stream = gzcompress($this->value);
+			$this->dictionary("Filter","/FlateDecode");
 			$this->dictionary("Length",$length = strlen($stream));
 			$buf .= $this->__fm_dictionary__("\n")."\n";
 			$buf .= "stream\n";
