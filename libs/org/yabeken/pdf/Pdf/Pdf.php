@@ -386,12 +386,7 @@ class Pdf extends Object{
 		
 		$buf = array();
 		$buf[] = "BT q ";
-		if($this->is_rotate()){
-			$angle = $this->rotate() * pi() / 180;
-			$cos = cos($angle);
-			$sin = sin($angle);
-			$buf[] = sprintf("%.3f %.3f %.3f %.3f %.3f %.3f cm 1 0 0 1 %.3f %.3f cm ",$cos,$sin,-$sin,$cos,$x,$y,-$x,-$y);
-		}
+		if($this->is_rotate()) $buf[] = $this->rotate_page($x,$y);
 		if($this->is_char_space()) $buf[] = sprintf("%s Tc ",$this->char_space());
 		if($this->is_leading()) $buf[] = sprintf("%s Tl ",$this->leading());
 		if($this->is_render()) $buf[] = sprintf("%s Tr ",$this->render());
@@ -445,13 +440,15 @@ class Pdf extends Object{
 	 * @param dict $style
 	 */
 	public function ellipse($x,$y,$rx,$ry,$style=null){
-		throw new Exception("under construction");
-		//TODO
-//		if($style !== null) $this->push_style($style);
-//		$this->begin_path($x,$y);
-//		
-//		$this->draw_path();
-//		if($style !== null) $this->pop_style();
+		if($style !== null) $this->push_style($style);
+		$a = 4/3*(M_SQRT2-1);
+		$this->begin_path($x+$rx,$y);
+		$this->add_bezier_path($x+$rx,$y+$a*$ry,$x+$a*$rx,$y+$ry,$x,$y+$ry);
+		$this->add_bezier_path($x-$a*$rx,$y+$ry,$x-$rx,$y+$a*$ry,$x-$rx,$y);
+		$this->add_bezier_path($x-$rx,$y-$a*$ry,$x-$a*$rx,$y-$ry,$x,$y-$ry);
+		$this->add_bezier_path($x+$a*$rx,$y-$ry,$x+$rx,$y-$a*$ry,$x+$rx,$y);
+		$this->draw_path();
+		if($style !== null) $this->pop_style();
 	}
 	/**
 	 * 円描画
@@ -467,10 +464,10 @@ class Pdf extends Object{
 	 * パスの始点を追加
 	 * @param number $x
 	 * @param number $y
-	 * @param dict $style
 	 */
-	public function begin_path($x,$y,$style=null){
-		$this->_path_ = array("q n ".$this->get_path_style());
+	public function begin_path($x,$y){
+		$this->_path_ = array("n ".$this->get_path_style());
+		if($this->is_rotate()) $this->_path_[] = $this->rotate_page($x,$y);
 		$this->_path_[] = sprintf("%.3f %.3f m",$x,$y);
 	}
 	/**
@@ -517,7 +514,7 @@ class Pdf extends Object{
 	 */
 	public function draw_path(){
 		if(!$this->_path_) throw new PdfException("path not begin");
-		$this->write_contents(sprintf("%s %s%s Q\n",implode(" ",$this->_path_),$this->stroke == "nofill" ? "s" : "b",$this->stroke == "evenodd" ? "*" : ""));
+		$this->write_contents(sprintf("q %s %s%s Q\n",implode(" ",$this->_path_),$this->stroke == "nofill" ? "s" : "b",$this->stroke == "evenodd" ? "*" : ""));
 		$this->_path_ = array();
 	}
 	/**
@@ -643,6 +640,12 @@ class Pdf extends Object{
 	final protected function get_obj($id){
 		if(!isset($this->_obj_[$id])) throw new PdfException("object id not found [{$id}]");
 		return $this->_obj_[$id];
+	}
+	protected function rotate_page($x,$y){
+		$theta = $this->rotate * M_PI / 180;
+		$cos = cos($theta);
+		$sin = sin($theta);
+		return sprintf("%.3f %.3f %.3f %.3f %.3f %.3f cm 1 0 0 1 %.3f %.3f cm ",$cos,$sin,-$sin,$cos,$x,$y,-$x,-$y);
 	}
 	//style
 	protected function __set_font__($value){
