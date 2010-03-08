@@ -112,14 +112,12 @@ class Pdf extends Object{
 	static protected $__line_cap__ = "type=choice(0,1,2),style=true";
 	static protected $__line_join__ = "type=choice(0,1,2),style=true";
 	static protected $__miter_limit__ = "type=number,style=true";
-	static protected $__dash_pattern__ = "type=integer[]";
-	static protected $__dash_phase__ = "type=integer";
+	static protected $__dash__ = "type=string,style=true";
 	protected $line_width;
 	protected $line_cap;
 	protected $line_join;
 	protected $miter_limit;
-	protected $dash_pattern;
-	protected $dash_phase;
+	protected $dash;
 	
 	static protected $__stroke__ = "type=choice(nofill,nonzero,evenodd),style=true";
 	protected $stroke = "nofill";
@@ -527,8 +525,7 @@ class Pdf extends Object{
 		if($this->is_line_cap()) $r[] = sprintf("%d J",$this->line_cap);
 		if($this->is_line_join()) $r[] = sprintf("%d j",$this->line_join);
 		if($this->is_miter_limit()) $r[] = sprintf("%.3f",$this->miter_limit);
-		//TODO dash
-//		if($this->is_dash()) $r[] = sprintf("[%s] %d",implode(" ",$this->dash[0]),$this->dash[1]);
+		if($this->is_dash()) $r[] = sprintf("[%s] %d",implode(" ",$this->in_dash("a")),$this->in_dash("p"));
 		return implode(" ",$r);
 	}
 	/**
@@ -713,6 +710,29 @@ class Pdf extends Object{
 			eq("normal",$pdf->align());
 		 */
 		$this->align("normal");
+	}
+	protected function __set_dash__($even,$odd=null,$phase=null){
+		if(strpos($even," ")!==false) list($even,$odd,$phase) = explode(" ",$even);
+		$this->dash = sprintf("%s %s %s",$even,$odd,$phase);
+	}
+	protected function __in_dash__($d){
+		if(!$this->dash) return;
+		$dash = explode(" ",$this->dash);
+		switch($d){
+			case "even":
+			case "e":
+				return intval($dash[0]);
+			case "odd":
+			case "o":
+				return $dash[1] === "" ? null : intval($dash[1]);
+			case "array":
+			case "a":
+				return $dash[1] === "" ? array(intval($dash[0])) : array(intval($dash[0]),intval($dash[1]));
+			case "phase":
+			case "p":
+				return intval($dash[2]);
+		}
+		throw new PdfException(sprintf("unknown dash parameter [%s]",$d));
 	}
 	// Parser 
 	/**
