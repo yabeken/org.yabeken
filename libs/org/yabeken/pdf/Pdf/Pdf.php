@@ -409,11 +409,9 @@ class Pdf extends Object{
 	 * @param dict $style
 	 */
 	public function line($x1,$y1,$x2,$y2,$style=null){
-		if($style !== null) $this->push_style($style);
-		$this->begin_path($x1,$y1);
+		$this->begin_path($x1,$y1,$style);
 		$this->add_line_path($x2,$y2);
 		$this->draw_path();
-		if($style !== null) $this->pop_style();
 	}
 	/**
 	 * 矩形描画
@@ -424,10 +422,8 @@ class Pdf extends Object{
 	 * @param dict $style
 	 */
 	public function rectangle($x,$y,$width,$height,$style=null){
-		if($style !== null) $this->push_style($style);
-		$this->add_rectangle_path($x,$y,$width,$height);
+		$this->add_rectangle_path($x,$y,$width,$height,$style);
 		$this->draw_path();
-		if($style !== null) $this->pop_style();
 	}
 	/**
 	 * 楕円描画
@@ -438,15 +434,13 @@ class Pdf extends Object{
 	 * @param dict $style
 	 */
 	public function ellipse($x,$y,$rx,$ry,$style=null){
-		if($style !== null) $this->push_style($style);
 		$a = 4/3*(M_SQRT2-1);
-		$this->begin_path($x+$rx,$y);
+		$this->begin_path($x+$rx,$y,$style);
 		$this->add_bezier_path($x+$rx,$y+$a*$ry,$x+$a*$rx,$y+$ry,$x,$y+$ry);
 		$this->add_bezier_path($x-$a*$rx,$y+$ry,$x-$rx,$y+$a*$ry,$x-$rx,$y);
 		$this->add_bezier_path($x-$rx,$y-$a*$ry,$x-$a*$rx,$y-$ry,$x,$y-$ry);
 		$this->add_bezier_path($x+$a*$rx,$y-$ry,$x+$rx,$y-$a*$ry,$x+$rx,$y);
 		$this->draw_path();
-		if($style !== null) $this->pop_style();
 	}
 	/**
 	 * 円描画
@@ -462,11 +456,17 @@ class Pdf extends Object{
 	 * パスの始点を追加
 	 * @param number $x
 	 * @param number $y
+	 * @param dict $style
 	 */
-	public function begin_path($x,$y){
-		$this->_path_ = array("n ".$this->get_path_style());
+	public function begin_path($x,$y,$style=null){
+		$this->_path_ = array("n");
+		if($style !== null){
+			$this->push_style($style);
+			$this->apply_path_style();
+		}
 		if($this->is_rotate()) $this->_path_[] = $this->rotate_page($x,$y);
 		$this->_path_[] = sprintf("%.3f %.3f m",$x,$y);
+		if($style !== null) $this->pop_style();
 	}
 	/**
 	 * ベジエ曲線パスを追加
@@ -476,9 +476,14 @@ class Pdf extends Object{
 	 * @param number $y2
 	 * @param number $x3
 	 * @param number $y3
+	 * @param dict $style
 	 */
-	public function add_bezier_path($x1,$y1,$x2,$y2,$x3,$y3){
+	public function add_bezier_path($x1,$y1,$x2,$y2,$x3,$y3,$style=null){
 		if(!$this->_path_) throw new PdfException("path not begin");
+		if($style !== null){
+			$this->push_style($style);
+			$this->apply_path_style();
+		}
 		if($x1 === null && $y1 === null){
 			$this->_path_[] = sprintf("%.3f %.3f %.3f %.3f v",$x2,$y2,$x3,$y3);
 		}else if($x2 === null && $y2 === null){
@@ -486,15 +491,22 @@ class Pdf extends Object{
 		}else{
 			$this->_path_[] = sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c",$x1,$y1,$x2,$y2,$x3,$y3);
 		}
+		if($style !== null) $this->pop_style();
 	}
 	/**
 	 * 直線パスを追加
 	 * @param number $x
 	 * @param number $y
+	 * @param dict $style
 	 */
-	public function add_line_path($x,$y){
+	public function add_line_path($x,$y,$style=null){
 		if(!$this->_path_) throw new PdfException("path not begin");
+		if($style !== null){
+			$this->push_style($style);
+			$this->apply_path_style();
+		}
 		$this->_path_[] = sprintf("%.3f %.3f l",$x,$y);
+		if($style !== null) $this->pop_style();
 	}
 	/**
 	 * 矩形パスを追加
@@ -502,10 +514,16 @@ class Pdf extends Object{
 	 * @param number $y
 	 * @param number $width
 	 * @param number $height
+	 * @param dict $style
 	 */
-	public function add_rectangle_path($x,$y,$width,$height){
+	public function add_rectangle_path($x,$y,$width,$height,$style=null){
 		if(!$this->_path_) throw new PdfException("path not begin");
+		if($style !== null){
+			$this->push_style($style);
+			$this->apply_path_style();
+		}
 		$this->_path_[] = sprintf("%.3f %.3f %.3f %.3f re",$x,$y,$width,$height);
+		if($style !== null) $this->pop_style();
 	}
 	/**
 	 * 現在のパスを描画
@@ -516,9 +534,9 @@ class Pdf extends Object{
 		$this->_path_ = array();
 	}
 	/**
-	 * 現在のパススタイルを取得
+	 * 現在のパススタイルを設定
 	 */
-	protected function get_path_style(){
+	protected function apply_path_style(){
 		$r = array();
 		$r[] = sprintf("%.3f %.3f %.3f RG",$this->in_color("r")/255,$this->in_color("g")/255,$this->in_color("b")/255);
 		if($this->is_line_width()) $r[] = sprintf("%.3f w",$this->line_width);
@@ -529,7 +547,7 @@ class Pdf extends Object{
 			list($pattern,$phase) = $this->dash();
 			$r[] = sprintf("[%s] %d d",implode(" ",$pattern),$phase);
 		}
-		return implode(" ",$r);
+		$this->_path_[] = implode(" ",$r);
 	}
 	/**
 	 * スタイル適用
