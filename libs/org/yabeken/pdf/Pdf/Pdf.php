@@ -22,6 +22,10 @@ module("model.PdfResources");
  * TODO 太字と斜体字
  * TODO メモリ節約のためのバイナリファイルの扱い
  * 
+ * MEMO
+ * 自動改行などはサポートしない -> 継承した別ライブラリで実装
+ * ユニット変換はサポートしない -> 慣れの問題
+ * 
  * @author Kentaro YABE
  * @license New BSD License
  * @version alpha
