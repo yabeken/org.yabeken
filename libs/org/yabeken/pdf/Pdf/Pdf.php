@@ -15,11 +15,20 @@ module("model.PdfPages");
 module("model.PdfResources");
 /**
  * PDF
+ * CSS と似たような形式のスタイル指定が可能
  * 
  * TODO テンプレートの登録と適用
  * TODO 画像の回転ができてない予感？
  * TODO ページ出力時等のイベント処理
  * TODO 太字と斜体字
+ * TODO メモリ節約のためのバイナリファイルの扱い
+ * TODO 圧縮方式のサポート
+ * TODO 背景色
+ * 
+ * MEMO
+ * 自動改行などはサポートしない -> 継承した別ライブラリで実装
+ * ユニット変換はサポートしない -> 慣れの問題
+ * HTMLは取り込まない -> 継承した別ライブラリで実装
  * 
  * @author Kentaro YABE
  * @license New BSD License
@@ -104,29 +113,65 @@ class Pdf extends Object{
 	 */
 	protected $word_space;
 	
-	static protected $__background_color__ = "type=string,style=true";
-	protected $background_color;
-	
 	static protected $__line_width__ = "type=number,style=true";
 	static protected $__line_cap__ = "type=choice(0,1,2),style=true";
 	static protected $__line_join__ = "type=choice(0,1,2),style=true";
 	static protected $__miter_limit__ = "type=number,style=true";
-	static protected $__dash_pattern__ = "type=integer[]";
-	static protected $__dash_phase__ = "type=integer";
+	static protected $__dash__ = "type=string,style=true";
+	static protected $__fill__ = "type=choice(nofill,nonzero,evenodd),style=true";
+	/**
+	 * Line Width
+	 * @var number
+	 */
 	protected $line_width;
+	/**
+	 * Line Cap
+	 * @var number 0,1,2
+	 */
 	protected $line_cap;
+	/**
+	 * Line Join Style
+	 * @var number 0,1,2
+	 */
 	protected $line_join;
+	/**
+	 * Miter Limit
+	 * @var number
+	 */
 	protected $miter_limit;
-	protected $dash_pattern;
-	protected $dash_phase;
+	/**
+	 * Dash
+	 * @var string
+	 */
+	protected $dash;
+	/**
+	 * Fill
+	 * @var string
+	 */
+	protected $fill = "nofill";
 	
-	static protected $__stroke__ = "type=choice(nofill,nonzero,evenodd),style=true";
-	protected $stroke = "nofill";
+	static protected $__border_color__ = "type=string,style=true";
+	static protected $__border_style__ = "type=choice(none,dotted,dashed,solid,double,groove,ridge,inset,outset)";
+	static protected $__background_color__ = "type=string,style=true";
+	protected $border_color = "#000000 #000000 #000000 #000000";
+	protected $border_style = "none";
+	protected $background_color = "#000000";
+	
 	
 //	protected $intent;
 //	protected $flatness;
 //	protected $graphic_state;
 	
+	final protected function __init__(){
+		$this->_resources_ = $this->add_obj(new PdfResources());
+		$this->_catalog_ = $this->add_obj(new PdfCatalog());
+		$this->info = $this->add_obj(new PdfInfo());
+		foreach($this->props() as $name){
+			if($this->a($name,"style")===true){
+				$this->_style_props_[] = $name;
+			}
+		}
+	}
 	/**
 	 * 現在のページコンテンツに書き込む
 	 * @param $rawdata
@@ -209,6 +254,7 @@ class Pdf extends Object{
 						case 3: //palette
 							break;
 						default:
+							//TODO
 							throw new PdfException("alpha channel is not supported");
 					}
 					//compression,filter,interlace
@@ -301,15 +347,30 @@ class Pdf extends Object{
 	 * 画像描画
 	 * @param number $x
 	 * @param number $y
-	 * @param string $name
+	 * @param string $name_or_filename
 	 * @param string $style
 	 */
-	public function image($x,$y,$name,$style=null){
-		$current_style = is_null($style) ? "" : $this->current_style();
-		if(!is_null($style)) $this->style($style);
-		
+	public function image($x,$y,$name_or_filename,$style=null){
+		$name = $name_or_filename;
+		if(File::exist($name_or_filename)){
+			$name = md5($name_or_filename);
+			$file = new File($name_or_filename);
+			switch(strtolower($file->ext())){
+				case ".png":
+					$this->add_png($name,$file->get());
+					break;
+				case ".jpg":
+				case ".jpeg":
+					$this->add_jpeg($name,$file->get());
+					break;
+				default: throw new PdfException(sprintf("unsupported image file [%s]",$name_or_filename));
+			}
+		}
 		if(!$this->_resources_->XObject()->is_dictionary("RI-".$name)) throw new PdfException(sprintf("Image not found [%s]",$name));
 		$image = $this->_resources_->XObject()->in_dictionary("RI-".$name);
+
+		$current_style = is_null($style) ? "" : $this->current_style();
+		if(!is_null($style)) $this->style($style);
 		
 		//scale
 		$width = $this->is_width() ? $this->width() : $image->Width();
@@ -359,12 +420,7 @@ class Pdf extends Object{
 		
 		$buf = array();
 		$buf[] = "BT q ";
-		if($this->is_rotate()){
-			$angle = $this->rotate() * pi() / 180;
-			$cos = cos($angle);
-			$sin = sin($angle);
-			$buf[] = sprintf("%.3f %.3f %.3f %.3f %.3f %.3f cm 1 0 0 1 %.3f %.3f cm ",$cos,$sin,-$sin,$cos,$x,$y,-$x,-$y);
-		}
+		if($this->is_rotate()) $buf[] = $this->rotate_page($x,$y);
 		if($this->is_char_space()) $buf[] = sprintf("%s Tc ",$this->char_space());
 		if($this->is_leading()) $buf[] = sprintf("%s Tl ",$this->leading());
 		if($this->is_render()) $buf[] = sprintf("%s Tr ",$this->render());
@@ -381,7 +437,7 @@ class Pdf extends Object{
 		if(!is_null($style)) $this->style($current_style);
 	}
 	/**
-	 * 直線を描画
+	 * 直線描画
 	 * @param number $x1
 	 * @param number $y1
 	 * @param number $x2
@@ -389,14 +445,12 @@ class Pdf extends Object{
 	 * @param dict $style
 	 */
 	public function line($x1,$y1,$x2,$y2,$style=null){
-		if($style !== null) $this->push_style($style);
 		$this->begin_path($x1,$y1,$style);
 		$this->add_line_path($x2,$y2);
 		$this->draw_path();
-		if($style !== null) $this->pop_style();
 	}
 	/**
-	 * 矩形を描画
+	 * 矩形描画
 	 * @param number $x
 	 * @param number $y
 	 * @param number $width
@@ -404,10 +458,40 @@ class Pdf extends Object{
 	 * @param dict $style
 	 */
 	public function rectangle($x,$y,$width,$height,$style=null){
-		if($style !== null) $this->push_style($style);
-		$this->add_rectangle_path($x,$y,$width,$height);
+		if(!$this->_path_) throw new PdfException("path not begin");
+		$this->begin_path($x,$y,$style);
+		$this->add_line_path($x+$width,$y);
+		$this->add_line_path($x+$width,$y+$height);
+		$this->add_line_path($x,$y+$height);
 		$this->draw_path();
 		if($style !== null) $this->pop_style();
+	}
+	/**
+	 * 楕円描画
+	 * @param number $x
+	 * @param number $y
+	 * @param number $rx
+	 * @param number $ry
+	 * @param dict $style
+	 */
+	public function ellipse($x,$y,$rx,$ry,$style=null){
+		$a = 4/3*(M_SQRT2-1);
+		$this->begin_path($x+$rx,$y,$style);
+		$this->add_bezier_path($x+$rx,$y+$a*$ry,$x+$a*$rx,$y+$ry,$x,$y+$ry);
+		$this->add_bezier_path($x-$a*$rx,$y+$ry,$x-$rx,$y+$a*$ry,$x-$rx,$y);
+		$this->add_bezier_path($x-$rx,$y-$a*$ry,$x-$a*$rx,$y-$ry,$x,$y-$ry);
+		$this->add_bezier_path($x+$a*$rx,$y-$ry,$x+$rx,$y-$a*$ry,$x+$rx,$y);
+		$this->draw_path();
+	}
+	/**
+	 * 円描画
+	 * @param number $x
+	 * @param number $y
+	 * @param number $r
+	 * @param dict $style
+	 */
+	public function circle($x,$y,$r,$style=null){
+		$this->ellipse($x,$y,$r,$r,$style);
 	}
 	/**
 	 * パスの始点を追加
@@ -416,8 +500,15 @@ class Pdf extends Object{
 	 * @param dict $style
 	 */
 	public function begin_path($x,$y,$style=null){
-		$this->_path_ = array("q n ".$this->get_path_style());
+		if($this->_path_) throw new PdfException("path has already began");
+		$this->_path_ = array();
+		if($style !== null){
+			$this->push_style($style);
+			$this->apply_path_style();
+		}
+		if($this->is_rotate()) $this->_path_[] = $this->rotate_page($x,$y);
 		$this->_path_[] = sprintf("%.3f %.3f m",$x,$y);
+		if($style !== null) $this->pop_style();
 	}
 	/**
 	 * ベジエ曲線パスを追加
@@ -427,9 +518,14 @@ class Pdf extends Object{
 	 * @param number $y2
 	 * @param number $x3
 	 * @param number $y3
+	 * @param dict $style
 	 */
-	public function add_bezier_path($x1,$y1,$x2,$y2,$x3,$y3){
+	public function add_bezier_path($x1,$y1,$x2,$y2,$x3,$y3,$style=null){
 		if(!$this->_path_) throw new PdfException("path not begin");
+		if($style !== null){
+			$this->push_style($style);
+			$this->apply_path_style();
+		}
 		if($x1 === null && $y1 === null){
 			$this->_path_[] = sprintf("%.3f %.3f %.3f %.3f v",$x2,$y2,$x3,$y3);
 		}else if($x2 === null && $y2 === null){
@@ -437,48 +533,46 @@ class Pdf extends Object{
 		}else{
 			$this->_path_[] = sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c",$x1,$y1,$x2,$y2,$x3,$y3);
 		}
+		if($style !== null) $this->pop_style();
 	}
 	/**
 	 * 直線パスを追加
 	 * @param number $x
 	 * @param number $y
+	 * @param dict $style
 	 */
-	public function add_line_path($x,$y){
+	public function add_line_path($x,$y,$style=null){
 		if(!$this->_path_) throw new PdfException("path not begin");
+		if($style !== null){
+			$this->push_style($style);
+			$this->apply_path_style();
+		}
 		$this->_path_[] = sprintf("%.3f %.3f l",$x,$y);
-	}
-	/**
-	 * 矩形パスを追加
-	 * @param number $x
-	 * @param number $y
-	 * @param number $width
-	 * @param number $height
-	 */
-	public function add_rectangle_path($x,$y,$width,$height){
-		if(!$this->_path_) throw new PdfException("path not begin");
-		$this->_path_[] = sprintf("%.3f %.3f %.3f %.3f re",$x,$y,$width,$height);
+		if($style !== null) $this->pop_style();
 	}
 	/**
 	 * 現在のパスを描画
 	 */
 	public function draw_path(){
 		if(!$this->_path_) throw new PdfException("path not begin");
-		$this->write_contents(sprintf("%s %s%s Q\n",implode(" ",$this->_path_),$this->stroke == "nofill" ? "s" : "b",$this->stroke == "evenodd" ? "*" : ""));
+		$this->write_contents(sprintf("q n %s %s%s Q\n",implode(" ",$this->_path_),$this->stroke == "nofill" ? "s" : "b",$this->stroke == "evenodd" ? "*" : ""));
 		$this->_path_ = array();
 	}
 	/**
-	 * 現在のパススタイルを取得
+	 * 現在のパススタイルを設定
 	 */
-	protected function get_path_style(){
+	protected function apply_path_style(){
 		$r = array();
 		$r[] = sprintf("%.3f %.3f %.3f RG",$this->in_color("r")/255,$this->in_color("g")/255,$this->in_color("b")/255);
 		if($this->is_line_width()) $r[] = sprintf("%.3f w",$this->line_width);
 		if($this->is_line_cap()) $r[] = sprintf("%d J",$this->line_cap);
 		if($this->is_line_join()) $r[] = sprintf("%d j",$this->line_join);
 		if($this->is_miter_limit()) $r[] = sprintf("%.3f",$this->miter_limit);
-		//TODO dash
-//		if($this->is_dash()) $r[] = sprintf("[%s] %d",implode(" ",$this->dash[0]),$this->dash[1]);
-		return implode(" ",$r);
+		if($this->is_dash()){
+			list($pattern,$phase) = $this->dash();
+			$r[] = sprintf("[%s] %d d",implode(" ",$pattern),$phase);
+		}
+		$this->_path_[] = implode(" ",$r);
 	}
 	/**
 	 * スタイル適用
@@ -533,16 +627,6 @@ class Pdf extends Object{
 	 */
 	protected function pop_style(){
 		$this->style(array_pop($this->_style_));
-	}
-	final protected function __init__(){
-		$this->_resources_ = $this->add_obj(new PdfResources());
-		$this->_catalog_ = $this->add_obj(new PdfCatalog());
-		$this->info = $this->add_obj(new PdfInfo());
-		foreach($this->props() as $name){
-			if($this->a($name,"style")===true){
-				$this->_style_props_[] = $name;
-			}
-		}
 	}
 	final protected function __str__(){
 		$xref = array();
@@ -599,6 +683,12 @@ class Pdf extends Object{
 	final protected function get_obj($id){
 		if(!isset($this->_obj_[$id])) throw new PdfException("object id not found [{$id}]");
 		return $this->_obj_[$id];
+	}
+	protected function rotate_page($x,$y){
+		$theta = $this->rotate * M_PI / 180;
+		$cos = cos($theta);
+		$sin = sin($theta);
+		return sprintf("%.3f %.3f %.3f %.3f %.3f %.3f cm 1 0 0 1 %.3f %.3f cm ",$cos,$sin,-$sin,$cos,$x,$y,-$x,-$y);
 	}
 	//style
 	protected function __set_font__($value){
@@ -666,6 +756,101 @@ class Pdf extends Object{
 			eq("normal",$pdf->align());
 		 */
 		$this->align("normal");
+	}
+	protected function __set_dash__(){
+		/***
+			$pdf = new Pdf();
+			$pdf->dash(1,2,3);
+			eq(array(array(1,2),3),$pdf->dash());
+			$pdf->dash("1 2 3");
+			eq(array(array(1,2),3),$pdf->dash());
+			$pdf->dash(1,2);
+			eq(array(array(1,2),0),$pdf->dash());
+			$pdf->dash("1 2");
+			eq(array(array(1,2),0),$pdf->dash());
+			$pdf->dash(1,0);
+			eq(array(array(1),0),$pdf->dash());
+			$pdf->dash("1 0");
+			eq(array(array(1),0),$pdf->dash());
+			$pdf->dash(1,0,3);
+			eq(array(array(1),3),$pdf->dash());
+			$pdf->dash("1 0 3");
+			eq(array(array(1),3),$pdf->dash());
+			$pdf->dash(1);
+			eq(array(array(1),0),$pdf->dash());
+			$pdf->dash("1");
+			eq(array(array(1),0),$pdf->dash());
+		 */
+		$even = $odd = null;
+		$phase = 0;
+		switch(func_num_args()){
+			case 1:
+				$args = func_get_arg(0);
+				if(is_numeric($args)){
+					$even = $args;
+				}else{
+					$args = explode(" ",$args);
+					call_user_func_array(array($this,"dash"),$args);
+					return;
+				}
+				break;
+			case 2:
+				list($even,$odd) = func_get_args();
+				break;
+			case 3:
+				list($even,$odd,$phase) = func_get_args();
+				break;
+			default: throw new PdfException("invalid arguments for dash style property");
+		}
+		if(intval($odd) == 0) $odd = null;
+		$this->dash = sprintf("%s %s %s",$even,$odd,$phase);
+	}
+	protected function __get_dash__(){
+		if(!$this->dash) return;
+		list($even,$odd,$phase) = explode(" ",$this->dash);
+		return is_numeric($odd) ? array(array(intval($even),intval($odd)),intval($phase)) : array(array(intval($even)),intval($phase));
+	}
+	protected function __set_border_color__(){
+		$t = $r = $b = $l = null;
+		$args = func_get_args();
+		switch(count($args)){
+			case 4:
+				$t = $args[0];
+				$r = $args[1];
+				$b = $args[2];
+				$l = $args[3];
+				break;
+			case 3:
+				$t = $args[0];
+				$r = $l = $args[1];
+				$b = $args[2];
+				break;
+			case 2:
+				$t = $b = $args[0];
+				$r = $l = $args[1];
+				break;
+			case 1:
+				$args = explode(" ",$args[0]);
+				if(count($args)==1){
+					$t = $r = $b = $l = $args[0];
+				}else{
+					call_user_func_array(array($this,"border_color"),$args);
+					return;
+				}
+				break;
+			default: throw new PdfException("invalid arguments for border color");
+		}
+		$preg = "/^#[0-9a-f]{6}$/i";
+		if(!preg_match($preg,$t) || !preg_match($preg,$l) || !preg_match($preg,$b) || !preg_match($preg,$r)){
+			throw new PdfException("invalid arguments for border color");
+		}
+		$this->border_color = "{$t} {$l} {$b} {$r}";
+	}
+	protected function __ar_border_color__(){
+		return array_combine(array("t","r","b","l"),explode(" ",$this->border_color));
+	}
+	protected function __in_border_color__($e,$d="t"){
+		
 	}
 	// Parser 
 	/**
@@ -752,6 +937,7 @@ class Pdf extends Object{
 		return $obj;
 	}
 	private function replace_refs(array $search,array $replace,$subject){
+		//チェックは甘々
 		if(!$search || !$replace) return $subject;
 		$u = array_map("md5",$search);
 		return str_replace(array_merge($search,$u),array_merge($u,$replace),$subject);

@@ -7,7 +7,7 @@ class IPAMinchoCID extends PdfFont{
 	protected $Subtype = "/CIDFontType2";
 	protected $BaseFont = "/IPAMincho";
 	protected $DW = 1000;
-	protected $W = array(231,389,500,631,631,500);//TODO
+	protected $W = array(1,127,500,231,389,500,631,631,500);//TODO
 	
 	protected function __init__(){
 		$this->FontDescriptor = $this->ref(new IPAMinchoDescriptor());

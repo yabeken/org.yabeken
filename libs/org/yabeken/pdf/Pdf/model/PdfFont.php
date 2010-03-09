@@ -53,7 +53,9 @@ class PdfFont extends PdfObj{
 		}
 		
 		//TODO
-		if($this->is_Widths(ord($str))) return $this->in_Widths(ord($str)) / 1000;
+		if($this->Widths){
+//			if($this->is_Widths(ord($str))) return $this->in_Widths(ord($str)) / 1000;
+		}
 		
 		if(preg_match("/^\xef(?:\xbd[\xa1-\xbf]|\xbe[\x80-\x9f])$/",$str)){
 			return $this->half_width();
