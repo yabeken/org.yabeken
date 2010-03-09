@@ -428,7 +428,8 @@ class Pdf extends Object{
 		if($this->is_scale()) $buf[] = sprintf("%s Tz ",$this->scale());
 		if($this->is_word_space()) $buf[] = sprintf("%s Tw ",$this->word_space());
 		$buf[] = sprintf("/RF-%s %s Tf ",$this->font,$this->font_size);
-		$buf[] = sprintf("%.3f %.3f %.3f rg ",$this->in_color("r")/255,$this->in_color("g")/255,$this->in_color("b")/255);
+		list($r,$g,$b) = $this->rgb($this->color());
+		$buf[] = sprintf("%.3f %.3f %.3f rg ",$r/255,$g/255,$b/255);
 		$buf[] = sprintf("%s %s Td ",$x, $y);
 		$buf[] = sprintf("(%s) Tj ",str_replace(array("\\","(",")","\r"),array("\\\\","\\(","\\)","\\r"),$this->_cur_font_->encode($str)));
 		$buf[] = "Q ET\n";
@@ -459,6 +460,7 @@ class Pdf extends Object{
 	 */
 	public function rectangle($x,$y,$width,$height,$style=null){
 		if(!$this->_path_) throw new PdfException("path not begin");
+		//TODO border color
 		$this->begin_path($x,$y,$style);
 		$this->add_line_path($x+$width,$y);
 		$this->add_line_path($x+$width,$y+$height);
@@ -476,7 +478,8 @@ class Pdf extends Object{
 	 */
 	public function ellipse($x,$y,$rx,$ry,$style=null){
 		$a = 4/3*(M_SQRT2-1);
-		$this->begin_path($x+$rx,$y,$style);
+		//TODO border color
+		$this->begin_path($x+$rx,$y);
 		$this->add_bezier_path($x+$rx,$y+$a*$ry,$x+$a*$rx,$y+$ry,$x,$y+$ry);
 		$this->add_bezier_path($x-$a*$rx,$y+$ry,$x-$rx,$y+$a*$ry,$x-$rx,$y);
 		$this->add_bezier_path($x-$rx,$y-$a*$ry,$x-$a*$rx,$y-$ry,$x,$y-$ry);
@@ -504,7 +507,7 @@ class Pdf extends Object{
 		$this->_path_ = array();
 		if($style !== null){
 			$this->push_style($style);
-			$this->apply_path_style();
+			$this->push_path_style();
 		}
 		if($this->is_rotate()) $this->_path_[] = $this->rotate_page($x,$y);
 		$this->_path_[] = sprintf("%.3f %.3f m",$x,$y);
@@ -524,7 +527,7 @@ class Pdf extends Object{
 		if(!$this->_path_) throw new PdfException("path not begin");
 		if($style !== null){
 			$this->push_style($style);
-			$this->apply_path_style();
+			$this->push_path_style();
 		}
 		if($x1 === null && $y1 === null){
 			$this->_path_[] = sprintf("%.3f %.3f %.3f %.3f v",$x2,$y2,$x3,$y3);
@@ -545,7 +548,7 @@ class Pdf extends Object{
 		if(!$this->_path_) throw new PdfException("path not begin");
 		if($style !== null){
 			$this->push_style($style);
-			$this->apply_path_style();
+			$this->push_path_style();
 		}
 		$this->_path_[] = sprintf("%.3f %.3f l",$x,$y);
 		if($style !== null) $this->pop_style();
@@ -561,24 +564,25 @@ class Pdf extends Object{
 	/**
 	 * 現在のパススタイルを設定
 	 */
-	protected function apply_path_style(){
-		$r = array();
-		$r[] = sprintf("%.3f %.3f %.3f RG",$this->in_color("r")/255,$this->in_color("g")/255,$this->in_color("b")/255);
-		if($this->is_line_width()) $r[] = sprintf("%.3f w",$this->line_width);
-		if($this->is_line_cap()) $r[] = sprintf("%d J",$this->line_cap);
-		if($this->is_line_join()) $r[] = sprintf("%d j",$this->line_join);
-		if($this->is_miter_limit()) $r[] = sprintf("%.3f",$this->miter_limit);
+	protected function push_path_style(){
+		$res = array();
+		list($r,$g,$b) = $this->rgb($this->color());
+		$res[] = sprintf("%.3f %.3f %.3f RG",$r/255,$g/255,$b/255);
+		if($this->is_line_width()) $res[] = sprintf("%.3f w",$this->line_width);
+		if($this->is_line_cap()) $res[] = sprintf("%d J",$this->line_cap);
+		if($this->is_line_join()) $res[] = sprintf("%d j",$this->line_join);
+		if($this->is_miter_limit()) $res[] = sprintf("%.3f",$this->miter_limit);
 		if($this->is_dash()){
-			list($pattern,$phase) = $this->dash();
-			$r[] = sprintf("[%s] %d d",implode(" ",$pattern),$phase);
+			list($pattern,$phase) = $this->ar_dash();
+			$res[] = sprintf("[%s] %d d",implode(" ",$pattern),$phase);
 		}
-		$this->_path_[] = implode(" ",$r);
+		$this->_path_[] = implode(" ",$res);
 	}
 	/**
 	 * スタイル適用
-	 * @param string $dict
+	 * @param dict $style
 	 */
-	public function style($dict){
+	public function style($style){
 		/***
 			$pdf = new Pdf();
 			$pdf->style("color=#0f0f0f,font_size=24");
@@ -594,8 +598,9 @@ class Pdf extends Object{
 				eq("ok","ok");
 			}
 		 */
-		foreach(Text::dict($dict) as $name=>$value){
+		foreach(Text::dict($style) as $name=>$value){
 			if(!in_array($name,$this->_style_props_)) throw new PdfException("invalid style property [{$name}]");
+			if($value === $this->{$name}) continue;
 			if(empty($value)){
 				$this->{"rm_".$name}();
 			}else{
@@ -610,7 +615,7 @@ class Pdf extends Object{
 	protected function current_style(){
 		$style = array();
 		foreach($this->_style_props_ as $name){
-			$style[] = $name."=".$this->$name();
+			$style[] = $name."=".$this->{$name};
 		}
 		return implode(",",$style);
 	}
@@ -690,6 +695,10 @@ class Pdf extends Object{
 		$sin = sin($theta);
 		return sprintf("%.3f %.3f %.3f %.3f %.3f %.3f cm 1 0 0 1 %.3f %.3f cm ",$cos,$sin,-$sin,$cos,$x,$y,-$x,-$y);
 	}
+	protected function rgb($color){
+		if(!preg_match("/^#[0-9a-f]{6}$/i",$color)) throw new PdfException("invalid color");
+		return array(hexdec(substr($color,1,2)),hexdec(substr($color,3,2)),hexdec(substr($color,5,2)));
+	}
 	//style
 	protected function __set_font__($value){
 		/***
@@ -724,21 +733,6 @@ class Pdf extends Object{
 		$this->color = $value;
 		return $this->color;
 	}
-	protected function __in_color__($e){
-		/***
-			$pdf = new Pdf();
-			$pdf->color("#123456");
-			eq(18,$pdf->in_color("r"));
-			eq(52,$pdf->in_color("g"));
-			eq(86,$pdf->in_color("b"));
-		 */
-		switch($e){
-			case "r": return hexdec(substr($this->color,1,2));
-			case "g": return hexdec(substr($this->color,3,2));
-			case "b": return hexdec(substr($this->color,5,2));
-		}
-		throw new PdfException("invalid RGB color element");
-	}
 	protected function __rm_color__(){
 		/***
 			$pdf = new Pdf();
@@ -761,25 +755,25 @@ class Pdf extends Object{
 		/***
 			$pdf = new Pdf();
 			$pdf->dash(1,2,3);
-			eq(array(array(1,2),3),$pdf->dash());
+			eq(array(array(1,2),3),$pdf->ar_dash());
 			$pdf->dash("1 2 3");
-			eq(array(array(1,2),3),$pdf->dash());
+			eq(array(array(1,2),3),$pdf->ar_dash());
 			$pdf->dash(1,2);
-			eq(array(array(1,2),0),$pdf->dash());
+			eq(array(array(1,2),0),$pdf->ar_dash());
 			$pdf->dash("1 2");
-			eq(array(array(1,2),0),$pdf->dash());
+			eq(array(array(1,2),0),$pdf->ar_dash());
 			$pdf->dash(1,0);
-			eq(array(array(1),0),$pdf->dash());
+			eq(array(array(1),0),$pdf->ar_dash());
 			$pdf->dash("1 0");
-			eq(array(array(1),0),$pdf->dash());
+			eq(array(array(1),0),$pdf->ar_dash());
 			$pdf->dash(1,0,3);
-			eq(array(array(1),3),$pdf->dash());
+			eq(array(array(1),3),$pdf->ar_dash());
 			$pdf->dash("1 0 3");
-			eq(array(array(1),3),$pdf->dash());
+			eq(array(array(1),3),$pdf->ar_dash());
 			$pdf->dash(1);
-			eq(array(array(1),0),$pdf->dash());
+			eq(array(array(1),0),$pdf->ar_dash());
 			$pdf->dash("1");
-			eq(array(array(1),0),$pdf->dash());
+			eq(array(array(1),0),$pdf->ar_dash());
 		 */
 		$even = $odd = null;
 		$phase = 0;
@@ -805,7 +799,7 @@ class Pdf extends Object{
 		if(intval($odd) == 0) $odd = null;
 		$this->dash = sprintf("%s %s %s",$even,$odd,$phase);
 	}
-	protected function __get_dash__(){
+	protected function __ar_dash__(){
 		if(!$this->dash) return;
 		list($even,$odd,$phase) = explode(" ",$this->dash);
 		return is_numeric($odd) ? array(array(intval($even),intval($odd)),intval($phase)) : array(array(intval($even)),intval($phase));
@@ -815,10 +809,7 @@ class Pdf extends Object{
 		$args = func_get_args();
 		switch(count($args)){
 			case 4:
-				$t = $args[0];
-				$r = $args[1];
-				$b = $args[2];
-				$l = $args[3];
+				list($t,$r,$b,$l) = $args;
 				break;
 			case 3:
 				$t = $args[0];
@@ -846,11 +837,11 @@ class Pdf extends Object{
 		}
 		$this->border_color = "{$t} {$l} {$b} {$r}";
 	}
-	protected function __ar_border_color__(){
-		return array_combine(array("t","r","b","l"),explode(" ",$this->border_color));
+	protected function __ar_border_color__($dir){
+		return explode(" ",$this->border_color);
 	}
-	protected function __in_border_color__($e,$d="t"){
-		
+	protected function __rm_border_color__(){
+		$this->border_color = "#000000 #000000 #000000 #000000";
 	}
 	// Parser 
 	/**
