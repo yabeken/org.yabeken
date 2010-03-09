@@ -15,16 +15,20 @@ module("model.PdfPages");
 module("model.PdfResources");
 /**
  * PDF
+ * CSS と似たような形式のスタイル指定が可能
  * 
  * TODO テンプレートの登録と適用
  * TODO 画像の回転ができてない予感？
  * TODO ページ出力時等のイベント処理
  * TODO 太字と斜体字
  * TODO メモリ節約のためのバイナリファイルの扱い
+ * TODO 圧縮方式のサポート
+ * TODO 背景色
  * 
  * MEMO
  * 自動改行などはサポートしない -> 継承した別ライブラリで実装
  * ユニット変換はサポートしない -> 慣れの問題
+ * HTMLは取り込まない -> 継承した別ライブラリで実装
  * 
  * @author Kentaro YABE
  * @license New BSD License
@@ -109,22 +113,48 @@ class Pdf extends Object{
 	 */
 	protected $word_space;
 	
-	static protected $__background_color__ = "type=string,style=true";
-	protected $background_color;
-	
 	static protected $__line_width__ = "type=number,style=true";
 	static protected $__line_cap__ = "type=choice(0,1,2),style=true";
 	static protected $__line_join__ = "type=choice(0,1,2),style=true";
 	static protected $__miter_limit__ = "type=number,style=true";
 	static protected $__dash__ = "type=string,style=true";
+	static protected $__fill__ = "type=choice(nofill,nonzero,evenodd),style=true";
+	/**
+	 * Line Width
+	 * @var number
+	 */
 	protected $line_width;
+	/**
+	 * Line Cap
+	 * @var number 0,1,2
+	 */
 	protected $line_cap;
+	/**
+	 * Line Join Style
+	 * @var number 0,1,2
+	 */
 	protected $line_join;
+	/**
+	 * Miter Limit
+	 * @var number
+	 */
 	protected $miter_limit;
+	/**
+	 * Dash
+	 * @var string
+	 */
 	protected $dash;
+	/**
+	 * Fill
+	 * @var string
+	 */
+	protected $fill = "nofill";
 	
-	static protected $__stroke__ = "type=choice(nofill,nonzero,evenodd),style=true";
-	protected $stroke = "nofill";
+	static protected $__border_style__ = "type=choice(none,dotted,dashed,solid,double,groove,ridge,inset,outset)";
+	static protected $__background_color__ = "type=string,style=true";
+	protected $border_style = "none";
+	protected $background_color;
+	
 	
 //	protected $intent;
 //	protected $flatness;
@@ -223,6 +253,7 @@ class Pdf extends Object{
 						case 3: //palette
 							break;
 						default:
+							//TODO
 							throw new PdfException("alpha channel is not supported");
 					}
 					//compression,filter,interlace
@@ -426,8 +457,13 @@ class Pdf extends Object{
 	 * @param dict $style
 	 */
 	public function rectangle($x,$y,$width,$height,$style=null){
-		$this->add_rectangle_path($x,$y,$width,$height,$style);
+		if(!$this->_path_) throw new PdfException("path not begin");
+		$this->begin_path($x,$y,$style);
+		$this->add_line_path($x+$width,$y);
+		$this->add_line_path($x+$width,$y+$height);
+		$this->add_line_path($x,$y+$height);
 		$this->draw_path();
+		if($style !== null) $this->pop_style();
 	}
 	/**
 	 * 楕円描画
@@ -463,7 +499,8 @@ class Pdf extends Object{
 	 * @param dict $style
 	 */
 	public function begin_path($x,$y,$style=null){
-		$this->_path_ = array("n");
+		if($this->_path_) throw new PdfException("path has already began");
+		$this->_path_ = array();
 		if($style !== null){
 			$this->push_style($style);
 			$this->apply_path_style();
@@ -513,28 +550,11 @@ class Pdf extends Object{
 		if($style !== null) $this->pop_style();
 	}
 	/**
-	 * 矩形パスを追加
-	 * @param number $x
-	 * @param number $y
-	 * @param number $width
-	 * @param number $height
-	 * @param dict $style
-	 */
-	public function add_rectangle_path($x,$y,$width,$height,$style=null){
-		if(!$this->_path_) throw new PdfException("path not begin");
-		if($style !== null){
-			$this->push_style($style);
-			$this->apply_path_style();
-		}
-		$this->_path_[] = sprintf("%.3f %.3f %.3f %.3f re",$x,$y,$width,$height);
-		if($style !== null) $this->pop_style();
-	}
-	/**
 	 * 現在のパスを描画
 	 */
 	public function draw_path(){
 		if(!$this->_path_) throw new PdfException("path not begin");
-		$this->write_contents(sprintf("q %s %s%s Q\n",implode(" ",$this->_path_),$this->stroke == "nofill" ? "s" : "b",$this->stroke == "evenodd" ? "*" : ""));
+		$this->write_contents(sprintf("q n %s %s%s Q\n",implode(" ",$this->_path_),$this->stroke == "nofill" ? "s" : "b",$this->stroke == "evenodd" ? "*" : ""));
 		$this->_path_ = array();
 	}
 	/**
@@ -877,6 +897,7 @@ class Pdf extends Object{
 		return $obj;
 	}
 	private function replace_refs(array $search,array $replace,$subject){
+		//チェックは甘々
 		if(!$search || !$replace) return $subject;
 		$u = array_map("md5",$search);
 		return str_replace(array_merge($search,$u),array_merge($u,$replace),$subject);
