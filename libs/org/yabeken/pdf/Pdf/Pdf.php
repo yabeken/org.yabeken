@@ -163,7 +163,7 @@ class Pdf extends Object{
 	 * フォント追加
 	 * @param PdfFont $font
 	 */
-	final public function add_font(PdfObj $font){
+	final public function add_font(PdfFont $font){
 		$name = "RF-".get_class($font);
 		if(!$this->_resources_->Font()->is_dictionary($name)){
 			$this->_resources_->Font()->dictionary($name,$this->add_obj($font));
@@ -189,7 +189,6 @@ class Pdf extends Object{
 		if($this->_resources_->XObject()->is_dictionary("RI-".$name)) throw new PdfException(sprintf("Image already exists [%s]",$name));
 		$image = new PdfImage("Filter=/FlateDecode");
 		$stream = new TextStream($src);
-		//TODO signature check
 		$stream->seek(8);
 		while(true){
 			$len = $stream->read_uint32_be();
