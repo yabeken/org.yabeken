@@ -525,7 +525,10 @@ class Pdf extends Object{
 		if($this->is_line_cap()) $r[] = sprintf("%d J",$this->line_cap);
 		if($this->is_line_join()) $r[] = sprintf("%d j",$this->line_join);
 		if($this->is_miter_limit()) $r[] = sprintf("%.3f",$this->miter_limit);
-		if($this->is_dash()) $r[] = sprintf("[%s] %d",implode(" ",$this->in_dash("a")),$this->in_dash("p"));
+		if($this->is_dash()){
+			list($pattern,$phase) = $this->dash();
+			$r[] = sprintf("[%s] %d d",implode(" ",$pattern),$phase);
+		}
 		return implode(" ",$r);
 	}
 	/**
@@ -711,28 +714,61 @@ class Pdf extends Object{
 		 */
 		$this->align("normal");
 	}
-	protected function __set_dash__($even,$odd=null,$phase=null){
-		if(strpos($even," ")!==false) list($even,$odd,$phase) = explode(" ",$even);
+	protected function __set_dash__(){
+		/***
+			$pdf = new Pdf();
+			$pdf->dash(1,2,3);
+			eq(array(array(1,2),3),$pdf->dash());
+			$pdf->dash("1 2 3");
+			eq(array(array(1,2),3),$pdf->dash());
+			$pdf->dash(1,2);
+			eq(array(array(1,2),0),$pdf->dash());
+			$pdf->dash("1 2");
+			eq(array(array(1,2),0),$pdf->dash());
+			$pdf->dash(1,0);
+			eq(array(array(1),0),$pdf->dash());
+			$pdf->dash("1 0");
+			eq(array(array(1),0),$pdf->dash());
+			$pdf->dash(1,0,3);
+			eq(array(array(1),3),$pdf->dash());
+			$pdf->dash("1 0 3");
+			eq(array(array(1),3),$pdf->dash());
+			$pdf->dash(1);
+			eq(array(array(1),0),$pdf->dash());
+			$pdf->dash("1");
+			eq(array(array(1),0),$pdf->dash());
+		 */
+		$even = $odd = null;
+		$phase = 0;
+		switch(func_num_args()){
+			case 1:
+				$args = func_get_arg(0);
+				if(is_numeric($args)){
+					$even = $args;
+				}else{
+					$args = explode(" ",$args);
+					if(count($args)==2){
+						list($even,$odd) = $args;
+					}else{
+						list($even,$odd,$phase) = $args;
+					}
+				}
+				break;
+			case 2:
+				list($even,$odd) = func_get_args();
+				break;
+			case 3:
+				list($even,$odd,$phase) = func_get_args();
+				break;
+			default: throw new PdfException("invalid arguments for dash style property");
+		}
+		if(intval($odd) == 0) $odd = null;
 		$this->dash = sprintf("%s %s %s",$even,$odd,$phase);
 	}
-	protected function __in_dash__($d){
+	protected function __get_dash__(){
 		if(!$this->dash) return;
-		$dash = explode(" ",$this->dash);
-		switch($d){
-			case "even":
-			case "e":
-				return intval($dash[0]);
-			case "odd":
-			case "o":
-				return $dash[1] === "" ? null : intval($dash[1]);
-			case "array":
-			case "a":
-				return $dash[1] === "" ? array(intval($dash[0])) : array(intval($dash[0]),intval($dash[1]));
-			case "phase":
-			case "p":
-				return intval($dash[2]);
-		}
-		throw new PdfException(sprintf("unknown dash parameter [%s]",$d));
+		list($even,$odd,$phase) = explode(" ",$this->dash);
+		return is_numeric($odd) ? array(array(intval($even),intval($odd)),intval($phase)) : array(array(intval($even)),intval($phase));
 	}
 	// Parser 
 	/**
