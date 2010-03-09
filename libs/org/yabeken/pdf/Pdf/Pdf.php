@@ -150,10 +150,12 @@ class Pdf extends Object{
 	 */
 	protected $fill = "nofill";
 	
+	static protected $__border_color__ = "type=string,style=true";
 	static protected $__border_style__ = "type=choice(none,dotted,dashed,solid,double,groove,ridge,inset,outset)";
 	static protected $__background_color__ = "type=string,style=true";
+	protected $border_color = "#000000 #000000 #000000 #000000";
 	protected $border_style = "none";
-	protected $background_color;
+	protected $background_color = "#000000";
 	
 	
 //	protected $intent;
@@ -789,11 +791,8 @@ class Pdf extends Object{
 					$even = $args;
 				}else{
 					$args = explode(" ",$args);
-					if(count($args)==2){
-						list($even,$odd) = $args;
-					}else{
-						list($even,$odd,$phase) = $args;
-					}
+					call_user_func_array(array($this,"dash"),$args);
+					return;
 				}
 				break;
 			case 2:
@@ -811,6 +810,48 @@ class Pdf extends Object{
 		if(!$this->dash) return;
 		list($even,$odd,$phase) = explode(" ",$this->dash);
 		return is_numeric($odd) ? array(array(intval($even),intval($odd)),intval($phase)) : array(array(intval($even)),intval($phase));
+	}
+	protected function __set_border_color__(){
+		$t = $r = $b = $l = null;
+		$args = func_get_args();
+		switch(count($args)){
+			case 4:
+				$t = $args[0];
+				$r = $args[1];
+				$b = $args[2];
+				$l = $args[3];
+				break;
+			case 3:
+				$t = $args[0];
+				$r = $l = $args[1];
+				$b = $args[2];
+				break;
+			case 2:
+				$t = $b = $args[0];
+				$r = $l = $args[1];
+				break;
+			case 1:
+				$args = explode(" ",$args[0]);
+				if(count($args)==1){
+					$t = $r = $b = $l = $args[0];
+				}else{
+					call_user_func_array(array($this,"border_color"),$args);
+					return;
+				}
+				break;
+			default: throw new PdfException("invalid arguments for border color");
+		}
+		$preg = "/^#[0-9a-f]{6}$/i";
+		if(!preg_match($preg,$t) || !preg_match($preg,$l) || !preg_match($preg,$b) || !preg_match($preg,$r)){
+			throw new PdfException("invalid arguments for border color");
+		}
+		$this->border_color = "{$t} {$l} {$b} {$r}";
+	}
+	protected function __ar_border_color__(){
+		return array_combine(array("t","r","b","l"),explode(" ",$this->border_color));
+	}
+	protected function __in_border_color__($e,$d="t"){
+		
 	}
 	// Parser 
 	/**
