@@ -30,7 +30,7 @@ module("model.PdfResources");
  * ユニット変換はサポートしない -> 慣れの問題
  * HTMLは取り込まない -> 継承した別ライブラリで実装
  * 
- * @author Kentaro YABE
+ * @author yabeken
  * @license New BSD License
  * @version alpha
  */
@@ -66,11 +66,6 @@ class Pdf extends Object{
 	protected $rotate;
 	protected $width;
 	protected $height;
-	
-//	static protected $__italic__ = "type=integer";
-//	static protected $__bold__ = "type=integer";
-//	protected $italic = 0;
-//	protected $bold = 0;
 	
 	static protected $__char_space__ = "type=number,style=true";
 	static protected $__leading__ = "type=number,style=true";
@@ -163,11 +158,6 @@ class Pdf extends Object{
 	protected $border_style = "none";
 	protected $background_color = "#000000";
 	
-	
-//	protected $intent;
-//	protected $flatness;
-//	protected $graphic_state;
-	
 	final protected function __init__(){
 		$this->_resources_ = $this->add_obj(new PdfResources());
 		$this->_catalog_ = $this->add_obj(new PdfCatalog());
@@ -178,7 +168,6 @@ class Pdf extends Object{
 			}
 		}
 	}
-
 	final protected function __str__(){
 		$xref = array();
 		ob_start();
