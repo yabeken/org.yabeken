@@ -178,12 +178,69 @@ class Pdf extends Object{
 			}
 		}
 	}
+
+	final protected function __str__(){
+		$xref = array();
+		ob_start();
+		println("%PDF-1.4");
+		foreach(array_keys($this->_obj_) as $id){
+			$xref[] = ob_get_length();
+			println($this->get_obj($id)->str());
+			$this->_obj_[$id]->str();
+		}
+		$startxref = ob_get_length();
+		println("xref");
+		println(sprintf("0 %d",count($xref)+1));
+		println("0000000000 65535 f");
+		foreach($xref as $len){
+			println(sprintf("%010d 00000 n",$len));
+		}
+		//trailer
+		println("trailer");
+		println("<<");
+		println(sprintf("/ID [ <%s> <%s> ]",md5(uniqid("")),md5(uniqid(""))));
+		println(sprintf("/Info %s",$this->info->fm_id()));
+		println(sprintf("/Root %s",$this->_catalog_->fm_id()));
+		println(sprintf("/Size %d",count($xref)+1));
+		println(">>");
+		//startxref
+		println("startxref");
+		println($startxref);
+		//eof
+		print("%%EOF");
+		return ob_get_clean();
+	}
 	/**
 	 * 現在のページコンテンツに書き込む
 	 * @param $rawdata
 	 */
 	protected function write_contents($rawdata){
 		$this->_cur_page_->in_dictionary("Contents")->value(str($rawdata));
+	}
+	/**
+	 * PDFオブジェクトを登録する
+	 * @param PdfObj $obj
+	 * @return PdfObj
+	 */
+	final protected function add_obj(PdfObj $obj){
+		$id = count($this->_obj_) + 1;
+		if(isset($this->_obj_[$id]) && $this->_obj_[$id] instanceof PdfObj) throw new PdfException("object id already exists [{$id}]");
+		$obj->id($id);
+		$this->_obj_[$id] = $obj;
+		foreach($obj->ref() as $o){
+			if($o instanceof PdfRef) continue;
+			$this->add_obj($o);
+		}
+		return $obj;
+	}
+	/**
+	 * PDFオブジェクトを取得
+	 * @param integer $id
+	 * @return PdfObj
+	 */
+	final protected function get_obj($id){
+		if(!isset($this->_obj_[$id])) throw new PdfException("object id not found [{$id}]");
+		return $this->_obj_[$id];
 	}
 	/**
 	 * ページ追加
@@ -556,7 +613,7 @@ class Pdf extends Object{
 		if($style !== null) $this->pop_style();
 	}
 	/**
-	 * スタイル適用
+	 * スタイルを適用
 	 * @param dict $style
 	 */
 	public function style($style){
@@ -586,7 +643,7 @@ class Pdf extends Object{
 		}
 	}
 	/**
-	 * 現在スタイル取得
+	 * 現在スタイルを取得
 	 * @return dict
 	 */
 	protected function current_style(){
@@ -597,7 +654,7 @@ class Pdf extends Object{
 		return implode(",",$style);
 	}
 	/**
-	 * 現在のスタイルをスタックに積んで新しいスタイルを適用
+	 * スタイルをスタックに積んで新しいスタイルを適用
 	 * @param dict $style
 	 */
 	protected function push_style($style=null){
@@ -605,73 +662,26 @@ class Pdf extends Object{
 		$this->style($style);
 	}
 	/**
-	 * スタックに積んでいるスタイルをリストア
+	 * スタイルをリストア
 	 */
 	protected function pop_style(){
 		$this->style(array_pop($this->_style_));
 	}
-	final protected function __str__(){
-		$xref = array();
-		ob_start();
-		println("%PDF-1.4");
-		foreach(array_keys($this->_obj_) as $id){
-			$xref[] = ob_get_length();
-			println($this->get_obj($id)->str());
-			$this->_obj_[$id]->str();
-		}
-		$startxref = ob_get_length();
-		println("xref");
-		println(sprintf("0 %d",count($xref)+1));
-		println("0000000000 65535 f");
-		foreach($xref as $len){
-			println(sprintf("%010d 00000 n",$len));
-		}
-		//trailer
-		println("trailer");
-		println("<<");
-		println(sprintf("/ID [ <%s> <%s> ]",md5(uniqid("")),md5(uniqid(""))));
-		println(sprintf("/Info %s",$this->info->fm_id()));
-		println(sprintf("/Root %s",$this->_catalog_->fm_id()));
-		println(sprintf("/Size %d",count($xref)+1));
-		println(">>");
-		//startxref
-		println("startxref");
-		println($startxref);
-		//eof
-		print("%%EOF");
-		return ob_get_clean();
-	}
 	/**
-	 * PDFオブジェクトを登録する
-	 * @param PdfObj $obj
-	 * @return PdfObj
+	 * ページを回転
+	 * @param number $x
+	 * @param number $y
 	 */
-	final protected function add_obj(PdfObj $obj){
-		$id = count($this->_obj_) + 1;
-		if(isset($this->_obj_[$id]) && $this->_obj_[$id] instanceof PdfObj) throw new PdfException("object id already exists [{$id}]");
-		$obj->id($id);
-		$this->_obj_[$id] = $obj;
-		foreach($obj->ref() as $o){
-			if($o instanceof PdfRef) continue;
-			$this->add_obj($o);
-		}
-		return $obj;
-	}
-	/**
-	 * PDFオブジェクトを取得
-	 * @param integer $id
-	 * @return PdfObj
-	 */
-	final protected function get_obj($id){
-		if(!isset($this->_obj_[$id])) throw new PdfException("object id not found [{$id}]");
-		return $this->_obj_[$id];
-	}
 	protected function rotate_page($x,$y){
 		$theta = $this->rotate * M_PI / 180;
 		$cos = cos($theta);
 		$sin = sin($theta);
 		return sprintf("%.3f %.3f %.3f %.3f %.3f %.3f cm 1 0 0 1 %.3f %.3f cm ",$cos,$sin,-$sin,$cos,$x,$y,-$x,-$y);
 	}
+	/**
+	 * RGB要素に分割
+	 * @param string $color
+	 */
 	protected function rgb($color){
 		if(!preg_match("/^#[0-9a-f]{6}$/i",$color)) throw new PdfException("invalid color");
 		return array(hexdec(substr($color,1,2)),hexdec(substr($color,3,2)),hexdec(substr($color,5,2)));
