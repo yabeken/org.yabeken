@@ -500,7 +500,7 @@ class Pdf extends Object{
 	public function line($x1,$y1,$x2,$y2,$style=null){
 		$this->begin_path($x1,$y1);
 		$this->add_line_path($x2,$y2);
-		$this->draw_path($style);
+		$this->end_path($style);
 	}
 	/**
 	 * 矩形描画
@@ -515,7 +515,7 @@ class Pdf extends Object{
 		$this->add_line_path($x+$width,$y);
 		$this->add_line_path($x+$width,$y+$height);
 		$this->add_line_path($x,$y+$height);
-		$this->draw_path($style);
+		$this->end_path($style);
 	}
 	/**
 	 * 楕円描画
@@ -532,7 +532,7 @@ class Pdf extends Object{
 		$this->add_bezier_path($x-$a*$rx,$y+$ry,$x-$rx,$y+$a*$ry,$x-$rx,$y);
 		$this->add_bezier_path($x-$rx,$y-$a*$ry,$x-$a*$rx,$y-$ry,$x,$y-$ry);
 		$this->add_bezier_path($x+$a*$rx,$y-$ry,$x+$rx,$y-$a*$ry,$x+$rx,$y);
-		$this->draw_path();
+		$this->end_path();
 	}
 	/**
 	 * 円描画
@@ -585,7 +585,7 @@ class Pdf extends Object{
 	/**
 	 * パスを描画
 	 */
-	public function draw_path($style=null){
+	public function end_path($style=null){
 		if(!$this->_path_) throw new PdfException("path does not begin");
 		if($style !== null) $this->push_style($style);
 		list($r,$g,$b) = $this->rgb($this->line_color());
