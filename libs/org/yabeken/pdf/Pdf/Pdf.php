@@ -584,6 +584,7 @@ class Pdf extends Object{
 	}
 	/**
 	 * パスを描画
+	 * @param dict $style
 	 */
 	public function end_path($style=null){
 		if(!$this->_path_) throw new PdfException("path does not begin");
