@@ -23,7 +23,7 @@ module("model.PdfResources");
  * TODO 太字と斜体字
  * TODO メモリ節約のためのバイナリファイルの扱い
  * TODO 圧縮方式のサポート
- * TODO 背景色
+ * TODO 背景色などのスタイリングをどこまでサポート？
  * 
  * MEMO
  * 自動改行などはサポートしない -> 継承した別ライブラリで実装
@@ -113,7 +113,6 @@ class Pdf extends Object{
 	static protected $__line_join__ = "type=choice(0,1,2),style=true";
 	static protected $__miter_limit__ = "type=number,style=true";
 	static protected $__dash__ = "type=string,style=true";
-	static protected $__fill__ = "type=choice(nofill,nonzero,evenodd),style=true";
 	static protected $__line_color__ = "type=string,style=true";
 	/**
 	 * Line Width
@@ -141,11 +140,6 @@ class Pdf extends Object{
 	 */
 	protected $dash;
 	/**
-	 * Fill
-	 * @var string
-	 */
-	protected $fill = "nofill";
-	/**
 	 * Line Color
 	 * @var color
 	 */
@@ -154,9 +148,13 @@ class Pdf extends Object{
 	static protected $__border_color__ = "type=string,style=true";
 	static protected $__border_style__ = "type=choice(none,dotted,dashed,solid,double,groove,ridge,inset,outset)";
 	static protected $__background_color__ = "type=string,style=true";
-	protected $border_color = "#000000 #000000 #000000 #000000";
+	protected $border_color;
 	protected $border_style = "none";
-	protected $background_color = "#000000";
+	/**
+	 * Background Color
+	 * @var color
+	 */
+	protected $background_color;
 	
 	final protected function __init__(){
 		$this->_resources_ = $this->add_obj(new PdfResources());
@@ -432,7 +430,6 @@ class Pdf extends Object{
 			$height = $height * $this->scale() / 100;
 		}
 		$this->write_contents(sprintf("q %.2F 0 0 %.2F %.2F %.2F cm /%s Do Q\n",$width,$height,$x,$y,"RI-".$name));
-		
 		if(!is_null($style)) $this->style($current_style);
 	}
 	/**
@@ -511,11 +508,24 @@ class Pdf extends Object{
 	 * @param dict $style
 	 */
 	public function rectangle($x,$y,$width,$height,$style=null){
-		$this->begin_path($x,$y);
-		$this->add_line_path($x+$width,$y);
-		$this->add_line_path($x+$width,$y+$height);
-		$this->add_line_path($x,$y+$height);
-		$this->end_path($style);
+		if($style !== null) $this->push_style($style);
+		if($this->is_border_color()){
+			list($t,$r,$b,$l) = $this->ar_border_color();
+			$this->begin_path($x,$y);
+			$this->add_line_path($x+$width,$y);
+			$this->add_line_path($x+$width,$y+$height);
+			$this->add_line_path($x,$y+$height);
+			$this->add_line_path($x,$y);
+			$this->end_path($style);
+		}else{
+			$this->begin_path($x,$y);
+			$this->add_line_path($x+$width,$y);
+			$this->add_line_path($x+$width,$y+$height);
+			$this->add_line_path($x,$y+$height);
+			$this->add_line_path($x,$y);
+			$this->end_path($style);
+		}
+		if($style !== null) $this->pop_style();
 	}
 	/**
 	 * 楕円描画
@@ -532,7 +542,7 @@ class Pdf extends Object{
 		$this->add_bezier_path($x-$a*$rx,$y+$ry,$x-$rx,$y+$a*$ry,$x-$rx,$y);
 		$this->add_bezier_path($x-$rx,$y-$a*$ry,$x-$a*$rx,$y-$ry,$x,$y-$ry);
 		$this->add_bezier_path($x+$a*$rx,$y-$ry,$x+$rx,$y-$a*$ry,$x+$rx,$y);
-		$this->end_path();
+		$this->end_path($style);
 	}
 	/**
 	 * 円描画
@@ -551,7 +561,6 @@ class Pdf extends Object{
 	 */
 	public function begin_path($x,$y){
 		$this->_path_ = array();
-		if($this->is_rotate()) $this->_path_[] = $this->rotate_page($x,$y);
 		$this->_path_[] = sprintf("%.3f %.3f m",$x,$y);
 	}
 	/**
@@ -589,8 +598,15 @@ class Pdf extends Object{
 	public function end_path($style=null){
 		if(!$this->_path_) throw new PdfException("path does not begin");
 		if($style !== null) $this->push_style($style);
-		list($r,$g,$b) = $this->rgb($this->line_color());
-		$this->_path_[] = sprintf("%.3f %.3f %.3f RG",$r/255,$g/255,$b/255);
+		if($this->is_rotate()) $this->_path_[] = $this->rotate_page($x,$y);
+		if($this->is_line_color()){
+			list($r,$g,$b) = $this->rgb($this->line_color());
+			$this->_path_[] = sprintf("%.3f %.3f %.3f RG",$r/255,$g/255,$b/255);
+		}
+		if($this->is_background_color()){
+			list($r,$g,$b) = $this->rgb($this->background_color());
+			$this->_path_[] = sprintf("%.3f %.3f %.3f rg",$r/255,$g/255,$b/255);
+		}
 		if($this->is_line_width()) $this->_path_[] = sprintf("%.3f w",$this->line_width);
 		if($this->is_line_cap()) $this->_path_[] = sprintf("%d J",$this->line_cap);
 		if($this->is_line_join()) $this->_path_[] = sprintf("%d j",$this->line_join);
@@ -599,7 +615,7 @@ class Pdf extends Object{
 			list($pattern,$phase) = $this->ar_dash();
 			$this->_path_[] = sprintf("[%s] %d d",implode(" ",$pattern),$phase);
 		}
-		$this->write_contents(sprintf("q n %s %s%s Q\n",implode(" ",$this->_path_),$this->fill == "nofill" ? "s" : "b",$this->fill == "evenodd" ? "*" : ""));
+		$this->write_contents(sprintf("q n %s %s Q\n",implode(" ",$this->_path_),$this->is_background_color() ? "b" : "s"));
 		if($style !== null) $this->pop_style();
 	}
 	/**
@@ -824,9 +840,6 @@ class Pdf extends Object{
 	}
 	protected function __ar_border_color__(){
 		return explode(" ",$this->border_color);
-	}
-	protected function __rm_border_color__(){
-		$this->border_color = "#000000 #000000 #000000 #000000";
 	}
 	// Parser 
 	/**
