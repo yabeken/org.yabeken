@@ -70,7 +70,7 @@ class PdfParser extends Object{
 		if($search_offset === false) throw new PdfException("invalid pdf file");
 		$offset_source = explode("\n",trim(str_replace(array("\r\n","\r"),"\n",$this->_file_->read($search_offset - $this->_file_->offset()))));
 		foreach($offset_source as $line){
-			$flg = substr($line,-1);
+			$flg = substr(trim($line),-1);
 			if($flg == "n"){
 				list($offset,,) = explode(" ",$line);
 				$offset_list[] = intval($offset);
