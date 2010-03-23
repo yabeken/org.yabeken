@@ -220,7 +220,7 @@ class PdfObj extends Object{
 			}
 			return false;
 		}
-		if(in_array($key,$this->_dictionary_) || isset($this->dictionary[$key])) return true;
+		if((in_array($key,$this->_dictionary_) && $this->{$key} !== null) || isset($this->dictionary[$key])) return true;
 		return false;
 	}
 	final protected function __fm_dictionary__($glue){

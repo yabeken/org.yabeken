@@ -150,7 +150,11 @@ class PdfParser extends Object{
 				$length = $length instanceof PdfRef ? intval(trim($this->read_obj($length->id()))) : $length;
 				$obj->dictionary("Length",$length);
 				//TODO 圧縮の種類
-				$obj->value(gzuncompress($this->_file_->read($length)));
+				$value = $this->_file_->read($length);
+				if($obj->is_dictionary("Filter")){
+					$value = gzuncompress($value);
+				}
+				$obj->value($value);
 			}
 		}
 		
