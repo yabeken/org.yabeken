@@ -114,6 +114,7 @@ class Pdf extends Object{
 	static protected $__miter_limit__ = "type=number,style=true";
 	static protected $__dash__ = "type=string,style=true";
 	static protected $__line_color__ = "type=string,style=true";
+	static protected $__flatness__ = "type=intger,style=true";
 	/**
 	 * Line Width
 	 * @var number
@@ -144,11 +145,24 @@ class Pdf extends Object{
 	 * @var color
 	 */
 	protected $line_color = "#000000";
+	/**
+	 * Flatness Tolerance
+	 * @var integer
+	 */
+	protected $flatness;
 	
 	static protected $__border_color__ = "type=string,style=true";
 	static protected $__border_style__ = "type=choice(none,dotted,dashed,solid,double,groove,ridge,inset,outset)";
 	static protected $__background_color__ = "type=string,style=true";
+	/**
+	 * Border Color
+	 * @var color[4]
+	 */
 	protected $border_color;
+	/**
+	 * Border Style
+	 * @var string
+	 */
 	protected $border_style = "none";
 	/**
 	 * Background Color
@@ -198,7 +212,7 @@ class Pdf extends Object{
 		return ob_get_clean();
 	}
 	/**
-	 * 現在のページコンテンツに書き込む
+	 * 現在のページに書き込む
 	 * @param $rawdata
 	 */
 	protected function write_contents($rawdata){
@@ -510,13 +524,15 @@ class Pdf extends Object{
 	public function rectangle($x,$y,$width,$height,$style=null){
 		if($style !== null) $this->push_style($style);
 		if($this->is_border_color()){
+			if($this->is_background_color()){
+				$this->rectangle($x,$y,$width,$height,"border_color=,line_color=");
+			}
 			list($t,$r,$b,$l) = $this->ar_border_color();
-			$this->begin_path($x,$y);
-			$this->add_line_path($x+$width,$y);
-			$this->add_line_path($x+$width,$y+$height);
-			$this->add_line_path($x,$y+$height);
-			$this->add_line_path($x,$y);
-			$this->end_path($style);
+			$this->rm_background_color();
+			$this->line($x,$y,$x+$width,$y,sprintf("line_color=%s",$b));
+			$this->line($x+$width,$y,$x+$width,$y+$height,sprintf("line_color=%s",$r));
+			$this->line($x+$width,$y+$height,$x,$y+$height,sprintf("line_color=%s",$t));
+			$this->line($x,$y+$height,$x,$y,sprintf("line_color=%s",$l));
 		}else{
 			$this->begin_path($x,$y);
 			$this->add_line_path($x+$width,$y);
@@ -610,11 +626,12 @@ class Pdf extends Object{
 		if($this->is_line_width()) $this->_path_[] = sprintf("%.3f w",$this->line_width);
 		if($this->is_line_cap()) $this->_path_[] = sprintf("%d J",$this->line_cap);
 		if($this->is_line_join()) $this->_path_[] = sprintf("%d j",$this->line_join);
-		if($this->is_miter_limit()) $this->_path_[] = sprintf("%.3f",$this->miter_limit);
+		if($this->is_miter_limit()) $this->_path_[] = sprintf("%.3f M",$this->miter_limit);
 		if($this->is_dash()){
 			list($pattern,$phase) = $this->ar_dash();
 			$this->_path_[] = sprintf("[%s] %d d",implode(" ",$pattern),$phase);
 		}
+		if($this->is_flatness()) $this->_path_[] = sprintf("%.3f i",$this->flatness);
 		$this->write_contents(sprintf("q n %s %s Q\n",implode(" ",$this->_path_),$this->is_background_color() ? "b" : "s"));
 		if($style !== null) $this->pop_style();
 	}
