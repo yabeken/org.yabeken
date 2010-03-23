@@ -62,9 +62,25 @@ class Pdf extends Object{
 	static protected $__rotate__ = "type=number,style=true";
 	static protected $__width__ = "type=number,style=true";
 	static protected $__height__ = "type=number,style=true";
+	/**
+	 * Text Alignment
+	 * @var string
+	 */
 	protected $align = "normal";
+	/**
+	 * Rotation Angle
+	 * @var number
+	 */
 	protected $rotate;
+	/**
+	 * Text Writing Width
+	 * @var number
+	 */
 	protected $width;
+	/**
+	 * Text Writing Height
+	 * @var number
+	 */
 	protected $height;
 	
 	static protected $__char_space__ = "type=number,style=true";
