@@ -15,7 +15,7 @@ module("model.PdfPages");
 module("model.PdfResources");
 /**
  * PDF
- * CSS と似たような形式のスタイル指定が可能
+ * CSS と似たような形式でスタイル指定が可能
  * 
  * TODO テンプレートの登録と適用
  * TODO 画像の回転ができてない予感？
@@ -28,6 +28,7 @@ module("model.PdfResources");
  * MEMO
  * 自動改行などはサポートしない -> 継承した別ライブラリで実装
  * ユニット変換はサポートしない -> 慣れの問題
+ * 座標原点は左下 -> PDFの仕様に沿う
  * HTMLは取り込まない -> 継承した別ライブラリで実装
  * 
  * @author yabeken
@@ -53,7 +54,7 @@ class Pdf extends Object{
 	
 	static protected $__font__ = "type=string,style=true";
 	static protected $__font_size__ = "type=number,style=true";
-	static protected $__color__ = "type=string,style=true";
+	static protected $__color__ = "type=color,style=true";
 	protected $font;
 	protected $font_size = 10.5;
 	protected $color = "#000000";
@@ -113,7 +114,7 @@ class Pdf extends Object{
 	static protected $__line_join__ = "type=choice(0,1,2),style=true";
 	static protected $__miter_limit__ = "type=number,style=true";
 	static protected $__dash__ = "type=string,style=true";
-	static protected $__line_color__ = "type=string,style=true";
+	static protected $__line_color__ = "type=color,style=true";
 	static protected $__flatness__ = "type=intger,style=true";
 	/**
 	 * Line Width
@@ -151,9 +152,9 @@ class Pdf extends Object{
 	 */
 	protected $flatness;
 	
-	static protected $__border_color__ = "type=string,style=true";
+	static protected $__border_color__ = "type=color[],style=true";
 	static protected $__border_style__ = "type=choice(none,dotted,dashed,solid,double,groove,ridge,inset,outset)";
-	static protected $__background_color__ = "type=string,style=true";
+	static protected $__background_color__ = "type=color,style=true";
 	/**
 	 * Border Color
 	 * @var color[4]
@@ -210,6 +211,26 @@ class Pdf extends Object{
 		//eof
 		print("%%EOF");
 		return ob_get_clean();
+	}
+	final protected function __set__($args,$param){
+		/***
+			$pdf = new Pdf();
+			$pdf->color("#123456");
+			eq("#123456",$pdf->color());
+		 */
+		//TODO test
+		if(!$param->set) throw new InvalidArgumentException('Processing not permitted [set]');
+		if($args[0] === null || $args[0] === '') return null;
+		$arg = $args[0];
+		switch($param->type){
+			case "color":
+				if(preg_match("/^#[0-9a-f]{6}$/i",$arg)!==1) $this->invalid_argument($param,$arg);
+				return $arg;
+			case "colors":
+				//TODO colors
+				throw new Exception("not implemented");
+		}
+		return parent::__set__($args,$param);
 	}
 	/**
 	 * 現在のページに書き込む
@@ -529,6 +550,7 @@ class Pdf extends Object{
 			}
 			list($t,$r,$b,$l) = $this->ar_border_color();
 			$this->rm_background_color();
+			//TODO 角の処理
 			$this->line($x,$y,$x+$width,$y,sprintf("line_color=%s",$b));
 			$this->line($x+$width,$y,$x+$width,$y+$height,sprintf("line_color=%s",$r));
 			$this->line($x+$width,$y+$height,$x,$y+$height,sprintf("line_color=%s",$t));
@@ -733,16 +755,6 @@ class Pdf extends Object{
 		 */
 		$this->font_size(10.5);
 	}
-	protected function __set_color__($value){
-		/***
-			$pdf = new Pdf();
-			$pdf->color("#123456");
-			eq("#123456",$pdf->color());
-		 */
-		if(!preg_match("/^#[0-9a-f]{6}$/i",$value)) throw new PdfException("invalid color");
-		$this->color = $value;
-		return $this->color;
-	}
 	protected function __rm_color__(){
 		/***
 			$pdf = new Pdf();
@@ -760,11 +772,6 @@ class Pdf extends Object{
 			eq("normal",$pdf->align());
 		 */
 		$this->align("normal");
-	}
-	protected function __set_line_color__($value){
-		if(!preg_match("/^#[0-9a-f]{6}$/i",$value)) throw new PdfException("invalid color");
-		$this->line_color = $value;
-		return $this->line_color;
 	}
 	protected function __rm_line_color__(){
 		$this->line_color = "#000000";
@@ -856,7 +863,7 @@ class Pdf extends Object{
 		$this->border_color = "{$t} {$l} {$b} {$r}";
 	}
 	protected function __ar_border_color__(){
-		return explode(" ",$this->border_color);
+		return $this->border_color ? explode(" ",$this->border_color) : array();
 	}
 	// Parser 
 	/**
