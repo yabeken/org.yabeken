@@ -735,7 +735,7 @@ class Pdf extends Object{
 	protected function __set_font__($value){
 		/***
 			$pdf = new Pdf();
-			uc($fname1,'','PdfFont');
+			$fname1 = create_class('','PdfFont');
 			$pdf->font($fname1);
 			eq($fname1,$pdf->font());
 		 */
