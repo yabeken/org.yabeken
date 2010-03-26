@@ -250,10 +250,7 @@ class Pea extends Http{
 		if($file->oname() == __CLASS__) return array();
 		$src = File::read($file);
 		$list = array();
-		if(preg_match_all("/[^\w]pear\(([\"\'])(.+?)\\1\)/",$src,$matches)){
-			$list = array_merge($list,$matches[2]);
-		}
-		if(preg_match_all("/[^\w]pear_install\(([\"\'])(.+?)\\1\)/",$src,$matches)){
+		if(preg_match_all("/[^\w]pear(?:_install)?\(([\"\'])(.+?)\\1\)/",$src,$matches)){
 			$list = array_merge($list,$matches[2]);
 		}
 		if(preg_match_all("/[^\w]Pea::(?:import|install)\(([\"\'])(.+?)\\1\)/",$src,$matches)){
