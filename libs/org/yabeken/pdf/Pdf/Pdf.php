@@ -52,6 +52,13 @@ class Pdf extends Object{
 	protected $_catalog_;
 	protected $_resources_;
 	
+	static protected $__transform__ = "type=number[]";
+	/**
+	 * 座標原点
+	 * @var number[2]
+	 */
+	protected $transform = array(0,0);
+	
 	static protected $__font__ = "type=string,style=true";
 	static protected $__font_size__ = "type=number,style=true";
 	static protected $__color__ = "type=color,style=true";
@@ -238,6 +245,29 @@ class Pdf extends Object{
 	 */
 	protected function write_contents($rawdata){
 		$this->_cur_page_->in_dictionary("Contents")->value(str($rawdata));
+	}
+	/**
+	 * 座標変換
+	 * @param number $x
+	 * @param number $y
+	 * @return number[2]
+	 */
+	protected function coordinate_transform($x,$y){
+		$x += $this->transform[0];
+		$y += $this->transform[1];
+		return array($x,$y);
+	}
+	/**
+	 * 座標回転
+	 * @param number $x
+	 * @param number $y
+	 * @return string
+	 */
+	protected function coordinate_rotate($x,$y){
+		$theta = $this->rotate * M_PI / 180;
+		$cos = cos($theta);
+		$sin = sin($theta);
+		return sprintf("%.3f %.3f %.3f %.3f %.3f %.3f cm 1 0 0 1 %.3f %.3f cm ",$cos,$sin,-$sin,$cos,$x,$y,-$x,-$y);
 	}
 	/**
 	 * PDFオブジェクトを登録する
@@ -436,6 +466,7 @@ class Pdf extends Object{
 	 * @param string $style
 	 */
 	public function image($x,$y,$name_or_filename,$style=null){
+		list($x,$y) = $this->coordinate_transform($x,$y);
 		$name = $name_or_filename;
 		if(File::exist($name_or_filename)){
 			$name = md5($name_or_filename);
@@ -454,9 +485,7 @@ class Pdf extends Object{
 		if(!$this->_resources_->XObject()->is_dictionary("RI-".$name)) throw new PdfException(sprintf("Image not found [%s]",$name));
 		$image = $this->_resources_->XObject()->in_dictionary("RI-".$name);
 
-		$current_style = is_null($style) ? "" : $this->current_style();
-		if(!is_null($style)) $this->style($style);
-		
+		if(!is_null($style)) $this->push_style($style);
 		//scale
 		$width = $this->is_width() ? $this->width() : $image->Width();
 		$height = $this->is_height() ? $this->height() : $image->Height();
@@ -465,7 +494,7 @@ class Pdf extends Object{
 			$height = $height * $this->scale() / 100;
 		}
 		$this->write_contents(sprintf("q %.2F 0 0 %.2F %.2F %.2F cm /%s Do Q\n",$width,$height,$x,$y,"RI-".$name));
-		if(!is_null($style)) $this->style($current_style);
+		if(!is_null($style)) $this->pop_style();
 	}
 	/**
 	 * 文字列描画
@@ -475,6 +504,7 @@ class Pdf extends Object{
 	 * @param dict $style
 	 */
 	public function text($x,$y,$str,$style=null){
+		list($x,$y) = $this->coordinate_transform($x,$y);
 		$current_style = is_null($style) ? "" : $this->current_style();
 		if(!is_null($style)) $this->style($style);
 		$str = str_replace(array("\r","\n"),"",$str);
@@ -504,7 +534,7 @@ class Pdf extends Object{
 		
 		$buf = array();
 		$buf[] = "BT q ";
-		if($this->is_rotate()) $buf[] = $this->rotate_page($x,$y);
+		if($this->is_rotate()) $buf[] = $this->coordinate_rotate($x,$y);
 		if($this->is_char_space()) $buf[] = sprintf("%s Tc ",$this->char_space());
 		if($this->is_leading()) $buf[] = sprintf("%s Tl ",$this->leading());
 		if($this->is_render()) $buf[] = sprintf("%s Tr ",$this->render());
@@ -598,6 +628,7 @@ class Pdf extends Object{
 	 * @param number $y
 	 */
 	public function begin_path($x,$y){
+		list($x,$y) = $this->coordinate_transform($x,$y);
 		$this->_path_ = array();
 		$this->_path_[] = sprintf("%.3f %.3f m",$x,$y);
 	}
@@ -613,10 +644,17 @@ class Pdf extends Object{
 	public function add_bezier_path($x1,$y1,$x2,$y2,$x3,$y3){
 		if(!$this->_path_) throw new PdfException("path does not begin");
 		if($x1 === null && $y1 === null){
+			list($x2,$y2) = $this->coordinate_transform($x2,$y2);
+			list($x3,$y3) = $this->coordinate_transform($x3,$y3);
 			$this->_path_[] = sprintf("%.3f %.3f %.3f %.3f v",$x2,$y2,$x3,$y3);
 		}else if($x2 === null && $y2 === null){
+			list($x1,$y1) = $this->coordinate_transform($x1,$y1);
+			list($x3,$y3) = $this->coordinate_transform($x3,$y3);
 			$this->_path_[] = sprintf("%.3f %.3f %.3f %.3f y",$x1,$y1,$x3,$y3);
 		}else{
+			list($x1,$y1) = $this->coordinate_transform($x1,$y1);
+			list($x2,$y2) = $this->coordinate_transform($x2,$y2);
+			list($x3,$y3) = $this->coordinate_transform($x3,$y3);
 			$this->_path_[] = sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c",$x1,$y1,$x2,$y2,$x3,$y3);
 		}
 	}
@@ -626,6 +664,7 @@ class Pdf extends Object{
 	 * @param number $y
 	 */
 	public function add_line_path($x,$y){
+		list($x,$y) = $this->coordinate_transform($x,$y);
 		if(!$this->_path_) throw new PdfException("path does not begin");
 		$this->_path_[] = sprintf("%.3f %.3f l",$x,$y);
 	}
@@ -636,7 +675,8 @@ class Pdf extends Object{
 	public function end_path($style=null){
 		if(!$this->_path_) throw new PdfException("path does not begin");
 		if($style !== null) $this->push_style($style);
-		if($this->is_rotate()) $this->_path_[] = $this->rotate_page($x,$y);
+		//TODO パスの扱い変更
+//		if($this->is_rotate()) $this->_path_[] = $this->coordinate_rotate($x,$y);
 		if($this->is_line_color()){
 			list($r,$g,$b) = $this->rgb($this->line_color());
 			$this->_path_[] = sprintf("%.3f %.3f %.3f RG",$r/255,$g/255,$b/255);
@@ -713,23 +753,19 @@ class Pdf extends Object{
 		$this->style(array_pop($this->_style_));
 	}
 	/**
-	 * ページを回転
-	 * @param number $x
-	 * @param number $y
-	 */
-	protected function rotate_page($x,$y){
-		$theta = $this->rotate * M_PI / 180;
-		$cos = cos($theta);
-		$sin = sin($theta);
-		return sprintf("%.3f %.3f %.3f %.3f %.3f %.3f cm 1 0 0 1 %.3f %.3f cm ",$cos,$sin,-$sin,$cos,$x,$y,-$x,-$y);
-	}
-	/**
 	 * RGB要素に分割
 	 * @param string $color
 	 */
 	protected function rgb($color){
 		if(!preg_match("/^#[0-9a-f]{6}$/i",$color)) throw new PdfException("invalid color");
 		return array(hexdec(substr($color,1,2)),hexdec(substr($color,3,2)),hexdec(substr($color,5,2)));
+	}
+	//settings
+	protected function __set_transform__($x,$y){
+		$this->trasform = array($x,$y);
+	}
+	protected function __rm_transform__(){
+		$this->transform = array(0,0);
 	}
 	//style
 	protected function __set_font__($value){
