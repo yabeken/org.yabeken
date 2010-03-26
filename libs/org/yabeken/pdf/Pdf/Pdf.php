@@ -253,6 +253,7 @@ class Pdf extends Object{
 	 * @return number[2]
 	 */
 	protected function coordinate_transform($x,$y){
+		if(!is_numeric($x) || !is_numeric($y)) throw new PdfException("invalid argument");
 		$x += $this->transform[0];
 		$y += $this->transform[1];
 		return array($x,$y);
