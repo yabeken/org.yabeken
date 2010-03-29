@@ -7,13 +7,14 @@
 class Pea extends Http{
 	protected $agent = "Pea (PEAR Client) powered by rhaco2";
 	
-	static private $PEAR_PATH;
-	static private $IMPORTED = array();
-	static private $CHANNEL = array();
-	static private $INSTALL = array();
-	static private $PREFFERED_STATE = 0;
-	static private $DEPENDENCY = false;
-	static private $OPTIONAL = false;
+	static private $pear_path;
+	static private $download_path;
+	static private $imported = array();
+	static private $channel = array();
+	static private $install = array();
+	static private $preffered_state = 0;
+	static private $dependency = false;
+	static private $optional = false;
 	
 	static private $states = array("stable"=>0,"beta"=>1,"alpha"=>2,"devel"=>3);
 	static private $prepared = false;
@@ -26,16 +27,17 @@ class Pea extends Http{
 	static private function r(){
 		//Pea::r なんちって
 		if(self::$prepared) return;
-		self::$PEAR_PATH = module_const("pear_path",File::path(dirname(Lib::vendors_path()),"pear"));
-		if(!File::exist(File::path(self::$PEAR_PATH,"PEAR.php"))){
+		self::$pear_path = module_const("pear_path",File::path(dirname(Lib::vendors_path()),"pear"));
+		if(!File::exist(File::path(self::$pear_path,"PEAR.php"))){
 			self::install("pear.php.net/PEAR");
 		}
-		self::$DEPENDENCY = module_const("dependency",true);
-		self::$OPTIONAL = module_const("optional",false);
+		self::$download_path = module_const("download_path",App::work("pear_src"));
+		self::$dependency = module_const("dependency",true);
+		self::$optional = module_const("optional",false);
 		$state = module_const("state",self::STATE_STABLE);
-		self::$PREFFERED_STATE = isset(self::$states[$state]) ? self::$states[$state] : self::STATE_STABLE;
-		set_include_path(self::$PEAR_PATH.PATH_SEPARATOR.get_include_path());
-		require(File::path(self::$PEAR_PATH,"PEAR.php"));
+		self::$preffered_state = isset(self::$states[$state]) ? self::$states[$state] : self::STATE_STABLE;
+		set_include_path(self::$pear_path.PATH_SEPARATOR.get_include_path());
+		require(File::path(self::$pear_path,"PEAR.php"));
 		self::$prepared = true;
 	}
 	/**
@@ -47,12 +49,12 @@ class Pea extends Http{
 		self::r();
 		list($domain,$package_name,$package_version) = self::parse_package($package_path);
 		$package_key = strtolower($domain."/".$package_name);
-		if(isset(self::$IMPORTED[$package_key])) return self::$IMPORTED[$package_key];
-		$path = File::path(self::$PEAR_PATH,strtr($package_name,"_","/").".php");
+		if(isset(self::$imported[$package_key])) return self::$imported[$package_key];
+		$path = File::path(self::$pear_path,strtr($package_name,"_","/").".php");
 		if(!File::exist($path)) self::install($package_path);
 		include_once($path);
-		self::$IMPORTED[$package_key] = class_exists($package_name) ? $package_name : null;
-		return self::$IMPORTED[$package_key];
+		self::$imported[$package_key] = class_exists($package_name) ? $package_name : null;
+		return self::$imported[$package_key];
 	}
 	/**
 	 * インストール
@@ -62,14 +64,14 @@ class Pea extends Http{
 	static public function install($package_path){
 		list($domain,$package_name,$package_version) = self::parse_package($package_path);
 		if(strtolower($package_name) != "pear") self::r();
-		if(isset(self::$INSTALL[strtolower($domain."/".$package_name)])) return true;
-		if(!isset(self::$CHANNEL[$domain])) self::channel_discover($domain);
+		if(isset(self::$install[strtolower($domain."/".$package_name)])) return true;
+		if(!isset(self::$channel[$domain])) self::channel_discover($domain);
 		
-		$allreleases_xml = self::$CHANNEL[$domain]."/r/".strtolower($package_name)."/allreleases.xml";
+		$allreleases_xml = self::$channel[$domain]."/r/".strtolower($package_name)."/allreleases.xml";
 		if(!Tag::setof($a,R(new self())->do_get($allreleases_xml)->body(),"a")) throw new RuntimeException($package_path." not found");
 		$target_package = $package_name;
 		$target_version = null;
-		$target_state = self::$PREFFERED_STATE;
+		$target_state = self::$preffered_state;
 		if(isset(self::$states[$package_version]) && self::$states[$package_version] > $target_state){
 			$target_state = self::$states[$package_version];
 			$package_version = null;
@@ -88,20 +90,20 @@ class Pea extends Http{
 		}
 		if(empty($target_version)) throw new RuntimeException($package_path." not found");
 		
-		$download_path = File::path(App::work("pear"),str_replace(array(".","-"),"_",$domain)."_".$target_package."_".strtr($target_version,".","_"));
+		$download_path = File::path(self::$download_path,str_replace(array(".","-"),"_",$domain)."_".$target_package."_".strtr($target_version,".","_"));
 		$download_url = "http://".$domain."/get/".$target_package."-".$target_version.".tgz";
 		if(!File::exist($download_path)){
 			self::download($download_url,$download_path);
 		}
 		$package_xml = File::exist(File::path($download_path,"package.xml")) ? File::path($download_path,"package.xml") : File::path($download_path,"package2.xml");
-		self::$INSTALL[strtolower($domain."/".$target_package)] = $package_xml;
+		self::$install[strtolower($domain."/".$target_package)] = $package_xml;
 		if(Tag::setof($package,File::read($package_xml),"package")){
 			switch($package->in_param("version")){
 				case "1.0":
-					if(self::$DEPENDENCY){
+					if(self::$dependency){
 						foreach($package->f("deps.in(dep)") as $dep){
 							if($dep->in_param("type")=="pkg"){
-								if(self::$OPTIONAL || $dep->in_param("optional") == "no"){
+								if(self::$optional || $dep->in_param("optional") == "no"){
 									self::install($dep->value());
 								}
 							}
@@ -109,7 +111,7 @@ class Pea extends Http{
 					}
 					foreach($package->f("release.filelist.in(file)") as $file){
 						if($file->in_param("role") != "php") continue;
-						$baseinstalldir = File::path(self::$PEAR_PATH,$file->in_param("baseinstalldir"));
+						$baseinstalldir = File::path(self::$pear_path,$file->in_param("baseinstalldir"));
 						$name = $file->in_param("name");
 						$src = File::path($download_path,File::path($target_package."-".$target_version,$name));
 						$dst = File::path($baseinstalldir,$name);
@@ -117,11 +119,11 @@ class Pea extends Http{
 					}
 					break;
 				case "2.0":
-					if(self::$DEPENDENCY){
+					if(self::$dependency){
 						foreach($package->f("dependencies.required.in(package)") as $dep){
 							self::install($dep->f("channel.value()")."/".$dep->f("name.value()"));
 						}
-						if(self::$OPTIONAL){
+						if(self::$optional){
 							foreach($package->f("dependencies.optional.in(package)") as $dep){
 								self::install($dep->f("channel.value()")."/".$dep->f("name.value()"));
 							}
@@ -131,7 +133,7 @@ class Pea extends Http{
 						$default_baseinstalldir = $dir->in_param("baseinstalldir","/");
 						foreach($dir->in("file") as $file){
 							if($file->in_param("role") != "php") continue;
-							$baseinstalldir = File::path(self::$PEAR_PATH,$file->in_param("baseinstalldir",$default_baseinstalldir));
+							$baseinstalldir = File::path(self::$pear_path,$file->in_param("baseinstalldir",$default_baseinstalldir));
 							$name = $file->in_param("name");
 							$src = File::path($download_path,File::path($target_package."-".$target_version,$name));
 							$dst = File::path($baseinstalldir,$name);
@@ -143,7 +145,7 @@ class Pea extends Http{
 					throw new Exception("unknown package version");
 			}
 		}
-		unset(self::$INSTALL[strtolower($domain."/".$target_package)]);
+		unset(self::$install[strtolower($domain."/".$target_package)]);
 		return true;
 	}
 	static protected function download($url,$outpath){
@@ -164,8 +166,8 @@ class Pea extends Http{
 		if(Tag::setof($channel,R(new self())->do_get("http://{$domain}/channel.xml")->body())){
 			$url = $channel->f("rest.baseurl[0].value()");
 			if(!empty($url)){
-				self::$CHANNEL[$domain] = (substr($url,-1)=="/") ? $url = substr($url,0,-1) : $url;
-				return self::$CHANNEL[$domain];
+				self::$channel[$domain] = (substr($url,-1)=="/") ? $url = substr($url,0,-1) : $url;
+				return self::$channel[$domain];
 			}
 		}
 		throw new Exception("channel [{$domain}] not found");
@@ -176,7 +178,7 @@ class Pea extends Http{
 	 * @param string $value
 	 */
 	static public function __setup_pear_install__(Request $req,$value){
-		if($req->is_vars("path")) def("org.yabeken.service.Pea@path",$req->in_vars("path"));
+		if($req->is_vars("path")) def("org.yabeken.service.Pea@pear_path",$req->in_vars("path"));
 		if($req->is_vars("nodeps")) def("org.yabeken.service.Pea@dependency",false);
 		if($req->is_vars("optional")) def("org.yabeken.service.Pea@optional",true);
 		if($req->is_vars("state")) def("org.yabeken.service.Pea@state",$req->in_vars("state"));
@@ -220,11 +222,12 @@ class Pea extends Http{
 	 */
 	static public function __setup_pear_reinstall__(Request $req,$value){
 		if($req->is_vars("path")) def("org.yabeken.service.Pea@pear_path",$req->in_vars("path"));
+		if($req->is_vars("download_path")) def("org.yabeken.service.Pea@download_path",$req->in_vars("download_path"));
 		self::r();
 		
-		if(is_dir(self::$PEAR_PATH)){
-			foreach(File::ls(self::$PEAR_PATH) as $file) File::rm($file);
-			foreach(File::dir(self::$PEAR_PATH) as $dir) File::rm($dir);
+		if(is_dir(self::$pear_path)){
+			foreach(File::ls(self::$pear_path) as $file) File::rm($file);
+			foreach(File::dir(self::$pear_path) as $dir) File::rm($dir);
 		}
 		
 		$package = array();
