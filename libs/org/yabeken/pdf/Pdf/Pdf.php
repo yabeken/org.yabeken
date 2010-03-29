@@ -43,6 +43,8 @@ class Pdf extends Object{
 	protected $_template_ = array();
 	protected $_page_ = array();
 	protected $_path_ = array();
+	protected $_path_origin_ = array();
+	protected $_paths_ = array();
 	protected $_style_ = array();
 	protected $_cur_page_;
 	protected $_cur_font_;
@@ -563,7 +565,7 @@ class Pdf extends Object{
 	public function line($x1,$y1,$x2,$y2,$style=null){
 		$this->begin_path($x1,$y1);
 		$this->add_line_path($x2,$y2);
-		$this->end_path($style);
+		$this->draw_path($style);
 	}
 	/**
 	 * 矩形描画
@@ -592,7 +594,7 @@ class Pdf extends Object{
 			$this->add_line_path($x+$width,$y+$height);
 			$this->add_line_path($x,$y+$height);
 			$this->add_line_path($x,$y);
-			$this->end_path($style);
+			$this->draw_path($style);
 		}
 		if($style !== null) $this->pop_style();
 	}
@@ -611,7 +613,7 @@ class Pdf extends Object{
 		$this->add_bezier_path($x-$a*$rx,$y+$ry,$x-$rx,$y+$a*$ry,$x-$rx,$y);
 		$this->add_bezier_path($x-$rx,$y-$a*$ry,$x-$a*$rx,$y-$ry,$x,$y-$ry);
 		$this->add_bezier_path($x+$a*$rx,$y-$ry,$x+$rx,$y-$a*$ry,$x+$rx,$y);
-		$this->end_path($style);
+		$this->draw_path($style);
 	}
 	/**
 	 * 円描画
@@ -630,8 +632,9 @@ class Pdf extends Object{
 	 */
 	public function begin_path($x,$y){
 		list($x,$y) = $this->coordinate_transform($x,$y);
-		$this->_path_ = array();
-		$this->_path_[] = sprintf("%.3f %.3f m",$x,$y);
+		$this->_path_ = array(sprintf("%.3f %.3f m",$x,$y));
+		//TODO エレガントに
+		$this->_path_origin_ = array($x,$y);
 	}
 	/**
 	 * ベジエ曲線パスを追加
@@ -670,14 +673,16 @@ class Pdf extends Object{
 		$this->_path_[] = sprintf("%.3f %.3f l",$x,$y);
 	}
 	/**
-	 * パスを描画
+	 * パスを閉じる
 	 * @param dict $style
 	 */
 	public function end_path($style=null){
 		if(!$this->_path_) throw new PdfException("path does not begin");
 		if($style !== null) $this->push_style($style);
-		//TODO パスの扱い変更
-//		if($this->is_rotate()) $this->_path_[] = $this->coordinate_rotate($x,$y);
+		if($this->is_rotate()){
+			list($x,$y) = $this->_path_origin_;
+			$this->_path_[] = $this->coordinate_rotate($x,$y);
+		}
 		if($this->is_line_color()){
 			list($r,$g,$b) = $this->rgb($this->line_color());
 			$this->_path_[] = sprintf("%.3f %.3f %.3f RG",$r/255,$g/255,$b/255);
@@ -695,8 +700,13 @@ class Pdf extends Object{
 			$this->_path_[] = sprintf("[%s] %d d",implode(" ",$pattern),$phase);
 		}
 		if($this->is_flatness()) $this->_path_[] = sprintf("%.3f i",$this->flatness);
-		$this->write_contents(sprintf("q n %s %s Q\n",implode(" ",$this->_path_),$this->is_background_color() ? "b" : "s"));
+		$this->_paths_[] = implode(" ",$this->_path_);
 		if($style !== null) $this->pop_style();
+	}
+	public function draw_path($style=null){
+		if($this->_path_) $this->end_path($style);
+		//TODO クリップパスの扱い
+		$this->write_contents(sprintf("q\nn\n%s\n%s\nQ\n",implode("\n",$this->_paths_),$this->is_background_color() ? "b" : "s"));
 	}
 	/**
 	 * スタイルを適用
