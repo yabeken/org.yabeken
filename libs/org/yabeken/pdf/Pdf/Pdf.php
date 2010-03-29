@@ -238,11 +238,6 @@ class Pdf extends Object{
 		return ob_get_clean();
 	}
 	final protected function __set__($args,$param){
-		/***
-			$pdf = new Pdf();
-			$pdf->color("#123456");
-			eq("#123456",$pdf->color());
-		 */
 		//TODO test
 		if(!$param->set) throw new InvalidArgumentException('Processing not permitted [set]');
 		if($args[0] === null || $args[0] === '') return null;
@@ -561,8 +556,10 @@ class Pdf extends Object{
 		if($this->is_scale()) $buf[] = sprintf("%s Tz ",$this->scale());
 		if($this->is_word_space()) $buf[] = sprintf("%s Tw ",$this->word_space());
 		$buf[] = sprintf("/RF-%s %s Tf ",$this->font,$this->font_size);
-		list($r,$g,$b) = $this->rgb($this->color());
-		$buf[] = sprintf("%.3f %.3f %.3f rg ",$r/255,$g/255,$b/255);
+		if($this->is_color()){
+			list($r,$g,$b) = $this->rgb($this->color());
+			$buf[] = sprintf("%.3f %.3f %.3f rg ",$r/255,$g/255,$b/255);
+		}
 		$buf[] = sprintf("%s %s Td ",$x, $y);
 		$buf[] = sprintf("(%s) Tj ",str_replace(array("\\","(",")","\r"),array("\\\\","\\(","\\)","\\r"),$this->_cur_font_->encode($str)));
 		$buf[] = "Q ET\n";
@@ -735,7 +732,6 @@ class Pdf extends Object{
 			eq("#0f0f0f",$pdf->color());
 			eq(24,$pdf->font_size());
 			$pdf->style("color=,font_size=");
-			eq("#000000",$pdf->color());
 			eq(10.5,$pdf->font_size());
 			try{
 				$pdf->style("hoge=>fuga");
@@ -818,15 +814,6 @@ class Pdf extends Object{
 		 */
 		$this->font_size(10.5);
 	}
-	protected function __rm_color__(){
-		/***
-			$pdf = new Pdf();
-			$pdf->color("#ffffff");
-			$pdf->rm_color();
-			eq("#000000",$pdf->color());
-		 */
-		$this->color = "#000000";
-	}
 	protected function __rm_align__(){
 		/***
 			$pdf = new Pdf();
@@ -835,9 +822,6 @@ class Pdf extends Object{
 			eq("normal",$pdf->align());
 		 */
 		$this->align("normal");
-	}
-	protected function __rm_line_color__(){
-		$this->line_color = "#000000";
 	}
 	protected function __set_dash__(){
 		/***
