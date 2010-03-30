@@ -28,10 +28,10 @@ class Pea extends Http{
 		//Pea::r なんちって
 		if(self::$prepared) return;
 		self::$pear_path = module_const("pear_path",File::path(dirname(Lib::vendors_path()),"pear"));
+		self::$download_path = module_const("download_path",App::work("pear_src"));
 		if(!File::exist(File::path(self::$pear_path,"PEAR.php"))){
 			self::install("pear.php.net/PEAR");
 		}
-		self::$download_path = module_const("download_path",App::work("pear_src"));
 		self::$dependency = module_const("dependency",true);
 		self::$optional = module_const("optional",false);
 		$state = module_const("state",self::STATE_STABLE);
