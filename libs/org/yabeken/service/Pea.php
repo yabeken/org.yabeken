@@ -37,7 +37,6 @@ class Pea extends Http{
 		$state = module_const("state",self::STATE_STABLE);
 		self::$preffered_state = isset(self::$states[$state]) ? self::$states[$state] : self::STATE_STABLE;
 		set_include_path(self::$pear_path.PATH_SEPARATOR.get_include_path());
-		require(File::path(self::$pear_path,"PEAR.php"));
 		self::$prepared = true;
 	}
 	/**
