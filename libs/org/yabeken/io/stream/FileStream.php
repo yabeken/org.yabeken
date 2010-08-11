@@ -1,5 +1,5 @@
 <?php
-import("org.yabeken.io.Stream");
+import('org.yabeken.io.stream.Stream');
 /**
  * ファイルをストリームっぽく扱う
  * @author yabeken
