@@ -2,7 +2,7 @@
 import("org.yabeken.io.Stream");
 /**
  * 文字列をストリームっぽく扱う
- * @author Kentaro YABE
+ * @author yabeken
  * @license New BSD License
  */
 class TextStream extends Stream{

@@ -2,7 +2,7 @@
 import("org.yabeken.io.Stream");
 /**
  * ファイルをストリームっぽく扱う
- * @author Kentaro YABE
+ * @author yabeken
  * @license New BSD License
  */
 class FileStream extends Stream{
