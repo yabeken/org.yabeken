@@ -10,7 +10,7 @@ class TextStream extends Stream{
 		$this->open($resource);
 	}
 	protected function __set_offset__($offset){
-		if($offset < 0 || $offset > $this->length) throw new Exception("invalid offset");
+		if($offset < 0 || $offset > $this->length) throw new StreamException("invalid offset");
 		$this->offset = $offset;
 		return $this->offset;
 	}

@@ -37,7 +37,7 @@ class FileStream extends Stream{
 	 * @param string $mode
 	 */
 	public function open($filename,$mode=null){
-		if(!is_file($filename)) throw new Exception(sprintf("%s is not a file",$filename));
+		if(!is_file($filename)) throw new StreamException(sprintf("%s is not a file",$filename));
 		$this->close();
 		$this->_resource_ = fopen($filename,$mode==null?"rb+":$mode);
 		$this->seek(0,self::SEEK_SET);
