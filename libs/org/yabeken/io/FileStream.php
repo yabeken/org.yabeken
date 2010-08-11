@@ -10,12 +10,26 @@ class FileStream extends Stream{
 		if($filename) $this->open($filename,$mode);
 	}
 	final protected function __del__(){
-		if(is_resource($this->_resource_)) fclose($this->_resource_);
+		$this->close();
 	}
 	protected function __set_offset__($offset){
 		fseek($this->_resource_,$offset,self::SEEK_SET);
 		$this->offset = ftell($this->_resource_);
 		return $this->offset;
+	}
+	/**
+	 * ファイルハンドルが開かれているか
+	 * @return boolean
+	 */
+	public function is_opened(){
+		return is_resource($this->_resource_);
+	}
+	/**
+	 * ファイルハンドルが閉じられているか
+	 * @return boolean
+	 */
+	public function is_closed(){
+		return !$this->is_opened();
 	}
 	/**
 	 * ファイルを開く
@@ -33,7 +47,7 @@ class FileStream extends Stream{
 	 * ファイルを閉じる
 	 */
 	public function close(){
-		$this->__del__();
+		if($this->is_opened()) fclose($this->_resource_);
 	}
 	/**
 	 * ポインタを変更する

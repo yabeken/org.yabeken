@@ -15,6 +15,20 @@ class TextStream extends Stream{
 		return $this->offset;
 	}
 	/**
+	 * ファイルハンドルが開かれているか
+	 * @return boolean
+	 */
+	public function is_opened(){
+		return true;
+	}
+	/**
+	 * ファイルハンドルが閉じられているか
+	 * @return boolean
+	 */
+	public function is_closed(){
+		return !$this->is_opened();
+	}
+	/**
 	 * 開く
 	 * @param string $resource
 	 */
