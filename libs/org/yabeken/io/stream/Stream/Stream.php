@@ -111,7 +111,7 @@ abstract class Stream extends Object{
 		return $this->read_binary(4, 'V');
 	}
 	/**
-	 * バイナリとして読み込む
+	 * バイナリ読み込み
 	 * @param integer $length
 	 * @param string $format
 	 */
