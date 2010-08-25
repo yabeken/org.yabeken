@@ -29,21 +29,21 @@ abstract class Stream extends Object{
 	 * @return integer
 	 */
 	final public function get_int8(){
-		return $this->unpack(1, 'c');
+		return $this->read_unpack(1, 'c');
 	}
 	/**
 	 * 8bit unsigned integer
 	 * @return integer
 	 */
 	final public function get_uint8(){
-		return $this->unpack(1, 'C');
+		return $this->read_unpack(1, 'C');
 	}
 	/**
 	 * 16bit signed integer by machine order
 	 * @return integer
 	 */
 	final public function get_int16(){
-		return $this->unpack(2, 's');
+		return $this->read_unpack(2, 's');
 	}
 	/**
 	 * 16bit signed integer by big endian order
@@ -66,56 +66,56 @@ abstract class Stream extends Object{
 	 * @return integer
 	 */
 	final public function get_uint16(){
-		return $this->unpack(2, 'S');
+		return $this->read_unpack(2, 'S');
 	}
 	/**
 	 * 16bit unsigned integer by big endian order
 	 * @return integer
 	 */
 	final public function get_uint16_be(){
-		return $this->unpack(2, 'n');
+		return $this->read_unpack(2, 'n');
 	}
 	/**
 	 * 16bit unsigned integer by little endian order
 	 * @return integer
 	 */
 	final public function get_uint16_le(){
-		return $this->unpack(2, 'v');
+		return $this->read_unpack(2, 'v');
 	}
 	/**
 	 * 32bit signed integer by machine order
 	 * @return integer
 	 */
 	final public function get_int32(){
-		return $this->unpack(4, 'l');
+		return $this->read_unpack(4, 'l');
 	}
 	/**
 	 * 32bit unsigned integer by machine order
 	 * @return integer
 	 */
 	final public function get_uint32(){
-		return $this->unpack(4, 'L');
+		return $this->read_unpack(4, 'L');
 	}
 	/**
 	 * 32bit unsigned integer by big endian order
 	 * @return integer
 	 */
 	final public function get_uint32_be(){
-		return $this->unpack(4, 'N');
+		return $this->read_unpack(4, 'N');
 	}
 	/**
 	 * 32bit unsigned integer by little endian order
 	 * @return integer
 	 */
 	final public function get_uint32_le(){
-		return $this->unpack(4, 'V');
+		return $this->read_unpack(4, 'V');
 	}
 	/**
 	 * unpack
 	 * @param integer $length
 	 * @param string $format
 	 */
-	final protected function unpack($length,$format){
+	final protected function read_unpack($length,$format){
 		list(,$r) = unpack($format,$this->read($length));
 		return $r;
 	}
