@@ -111,7 +111,7 @@ abstract class Stream extends Object{
 		return $this->read_unpack(4, 'V');
 	}
 	/**
-	 * unpack
+	 * read and unpack
 	 * @param integer $length
 	 * @param string $format
 	 */
