@@ -18,7 +18,7 @@ abstract class Stream extends Object{
 	abstract public function close();
 	abstract public function seek($len,$mode=null);
 	abstract public function read($len=2048);
-	abstract public function read_line($strict=false);
+	abstract public function get_line($strict=false);
 	abstract public function search($needle,$invert=false,$limit=null);
 	abstract public function eof();
 	abstract public function write($str);
@@ -28,94 +28,94 @@ abstract class Stream extends Object{
 	 * 8bit signed integer
 	 * @return integer
 	 */
-	final public function read_int8(){
-		return $this->read_binary(1, 'c');
+	final public function get_int8(){
+		return $this->unpack(1, 'c');
 	}
 	/**
 	 * 8bit unsigned integer
 	 * @return integer
 	 */
-	final public function read_uint8(){
-		return $this->read_binary(1, 'C');
+	final public function get_uint8(){
+		return $this->unpack(1, 'C');
 	}
 	/**
 	 * 16bit signed integer by machine order
 	 * @return integer
 	 */
-	final public function read_int16(){
-		return $this->read_binary(2, 's');
+	final public function get_int16(){
+		return $this->unpack(2, 's');
 	}
 	/**
 	 * 16bit signed integer by big endian order
 	 * @return integer
 	 */
-	final public function read_int16_be(){
-		$r = $this->read_uint16_be();
+	final public function get_int16_be(){
+		$r = $this->get_uint16_be();
 		return $r < 0x8000 ? $r : $r - 0x10000;
 	}
 	/**
 	 * 16bit signed integer by little endian order
 	 * @return integer
 	 */
-	final public function read_int16_le(){
-		$r = $this->read_uint16_le();
+	final public function get_int16_le(){
+		$r = $this->get_uint16_le();
 		return $r < 0x8000 ? $r : $r - 0x10000;
 	}
 	/**
 	 * 16bit unsigned integer by machine order
 	 * @return integer
 	 */
-	final public function read_uint16(){
-		return $this->read_binary(2, 'S');
+	final public function get_uint16(){
+		return $this->unpack(2, 'S');
 	}
 	/**
 	 * 16bit unsigned integer by big endian order
 	 * @return integer
 	 */
-	final public function read_uint16_be(){
-		return $this->read_binary(2, 'n');
+	final public function get_uint16_be(){
+		return $this->unpack(2, 'n');
 	}
 	/**
 	 * 16bit unsigned integer by little endian order
 	 * @return integer
 	 */
-	final public function read_uint16_le(){
-		return $this->read_binary(2, 'v');
+	final public function get_uint16_le(){
+		return $this->unpack(2, 'v');
 	}
 	/**
 	 * 32bit signed integer by machine order
 	 * @return integer
 	 */
-	final public function read_int32(){
-		return $this->read_binary(4, 'l');
+	final public function get_int32(){
+		return $this->unpack(4, 'l');
 	}
 	/**
 	 * 32bit unsigned integer by machine order
 	 * @return integer
 	 */
-	final public function read_uint32(){
-		return $this->read_binary(4, 'L');
+	final public function get_uint32(){
+		return $this->unpack(4, 'L');
 	}
 	/**
 	 * 32bit unsigned integer by big endian order
 	 * @return integer
 	 */
-	final public function read_uint32_be(){
-		return $this->read_binary(4, 'N');
+	final public function get_uint32_be(){
+		return $this->unpack(4, 'N');
 	}
 	/**
 	 * 32bit unsigned integer by little endian order
 	 * @return integer
 	 */
-	final public function read_uint32_le(){
-		return $this->read_binary(4, 'V');
+	final public function get_uint32_le(){
+		return $this->unpack(4, 'V');
 	}
 	/**
-	 * バイナリ読み込み
+	 * unpack
 	 * @param integer $length
 	 * @param string $format
 	 */
-	final protected function read_binary($length,$format){
+	final protected function unpack($length,$format){
 		list(,$r) = unpack($format,$this->read($length));
 		return $r;
 	}
