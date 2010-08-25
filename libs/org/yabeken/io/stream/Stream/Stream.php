@@ -6,8 +6,8 @@ module('StreamException');
  * @license New BSD License
  */
 abstract class Stream extends Object{
-	static protected $__offset__ = "type=integer";
-	static protected $__length__ = "type=integer,set=false";
+	static protected $__offset__ = 'type=integer';
+	static protected $__length__ = 'type=integer,set=false';
 	protected $offset;
 	protected $length;
 	protected $_resource_;
