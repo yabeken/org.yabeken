@@ -220,4 +220,12 @@ class FileStream extends Stream{
 		$this->length += strlen($str);
 		return $this->offset;
 	}
+	/**
+	 * truncate
+	 */
+	public function truncate(){
+		ftruncate($this->_resource_, 0);
+		$this->offset = 0;
+		$this->length = 0;
+	}
 }
