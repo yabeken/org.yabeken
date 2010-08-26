@@ -44,7 +44,7 @@ class BitStream extends Stream{
 	public function open($resource,$mode=null){
 		return $this->_resource_->open($resource,$mode);
 	}
-	public public function close(){
+	public function close(){
 		return $this->_resource_->close();
 	}
 	public function seek($len,$mode=null){
@@ -99,10 +99,10 @@ class BitStream extends Stream{
 	}
 	/**
 	 * put a bit
-	 * @param binary $bit
+	 * @param binary $value
 	 */
-	public function put_bit($bit){
-		$this->put_bits(1,$bit);
+	public function put_bit($value){
+		$this->put_bits(1,$value);
 	}
 	/**
 	 * put bits

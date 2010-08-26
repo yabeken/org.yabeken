@@ -1,7 +1,7 @@
 <?php
 import('org.yabeken.io.stream.Stream');
 /**
- * 文字列をストリームっぽく扱う
+ * Text Stream
  * @author yabeken
  * @license New BSD License
  */
@@ -146,10 +146,10 @@ class TextStream extends Stream{
 		return $this->offset == $this->length;
 	}
 	/**
-	 * 文字列を書き込む
-	 * @param string $str
+	 * append value
+	 * @param string $value
 	 */
-	public function write($str){
+	public function write($value){
 		/***
 			$s = new TextStream("hoge");
 			eq(8,$s->write("fuga"));
@@ -157,9 +157,77 @@ class TextStream extends Stream{
 			$s->offset(0);
 			eq("hogefuga",$s->read());
 		 */
-		$this->_resource_ .= $str;
-		$this->length += strlen($str);
+		$this->_resource_ .= $value;
+		$this->length += strlen($value);
 		$this->offset = $this->length;
 		return $this->offset;
 	}
+	/**
+	 * truncate
+	 */
+	public function truncate(){
+		$this->_resource_ = null;
+		$this->offset = 0;
+		$this->length = 0;
+	}
+	/***
+		# Stream Test with TextStream 
+		$s = new TextStream();
+		
+		# int8
+		$s->put_int8(1 << 7);
+		$s->offset(0);
+		eq(-128,$s->get_int8());
+		$s->offset(0);
+		eq(128,$s->get_uint8());
+		$s->truncate();
+
+		# uint8
+		$s->put_uint8(1 << 7);
+		$s->offset(0);
+		eq(-128,$s->get_int8());
+		$s->offset(0);
+		eq(128,$s->get_uint8());
+		$s->truncate();
+		
+		# int16 be
+		$s->put_int16_be(1 << 15);
+		$s->offset(0);
+		eq(-32768,$s->get_int16_be());
+		$s->offset(0);
+		eq(32768,$s->get_uint16_be());
+		$s->truncate();
+		
+		# int16 le
+		$s->put_int16_le(1 << 15);
+		$s->offset(0);
+		eq(-32768,$s->get_int16_le());
+		$s->offset(0);
+		eq(32768,$s->get_uint16_le());
+		$s->truncate();
+		
+		# uint16 be
+		$s->put_uint16_be(1 << 15);
+		$s->offset(0);
+		eq(-32768,$s->get_int16_be());
+		$s->offset(0);
+		eq(32768,$s->get_uint16_be());
+		$s->truncate();
+		
+		# uint16 le
+		$s->put_uint16_le(1 << 15);
+		$s->offset(0);
+		eq(-32768,$s->get_int16_le());
+		$s->offset(0);
+		eq(32768,$s->get_uint16_le());
+		$s->truncate();
+		
+		# int32 be
+		$s->put_int32_be(1 << 31);
+		$s->offset(0);
+		eq(-2147483647,$s->get_int32_be());
+		$s->offset(0);
+		eq(2147483647,$s->get_uint32_be());
+		$s->truncate();
+	 */
 }
