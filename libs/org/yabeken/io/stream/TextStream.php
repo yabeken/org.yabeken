@@ -6,6 +6,10 @@ import('org.yabeken.io.stream.Stream');
  * @license New BSD License
  */
 class TextStream extends Stream{
+	/**
+	 * Constructor
+	 * @param string $resource
+	 */
 	final protected function __new__($resource=null){
 		$this->open($resource);
 	}
@@ -41,7 +45,7 @@ class TextStream extends Stream{
 	 * 閉じる
 	 */
 	public function close(){
-		$this->_resource_ = null;
+		$this->truncate();
 	}
 	/**
 	 * ポインタを変更する
