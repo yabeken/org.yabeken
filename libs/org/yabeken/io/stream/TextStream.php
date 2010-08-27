@@ -6,6 +6,10 @@ import('org.yabeken.io.stream.Stream');
  * @license New BSD License
  */
 class TextStream extends Stream{
+	/**
+	 * Constructor
+	 * @param string $resource
+	 */
 	final protected function __new__($resource=null){
 		$this->open($resource);
 	}
@@ -41,7 +45,7 @@ class TextStream extends Stream{
 	 * 閉じる
 	 */
 	public function close(){
-		$this->_resource_ = null;
+		$this->truncate();
 	}
 	/**
 	 * ポインタを変更する
@@ -171,63 +175,134 @@ class TextStream extends Stream{
 		$this->length = 0;
 	}
 	/***
-		# Stream Test with TextStream 
+		# Stream Test with TextStream
+		# 8bit and 16bit integer is treated as 32bit integer in PHP
+		# 32bit integer has PHP_INT_MAX problem
+		
 		$s = new TextStream();
 		
-		# int8
+		# int8 
+		# 1000 0000 = -128
 		$s->put_int8(1 << 7);
 		$s->offset(0);
 		eq(-128,$s->get_int8());
+		$s->truncate();
+		
+		# 0111 1111 = 127
+		$s->put_int8(~(1 << 7));
+		$s->offset(0);
+		eq(127,$s->get_int8());
+		$s->truncate();
+		
+		# uint8
+		# 1000 0000 = 128
+		$s->put_uint8(1 << 7);
 		$s->offset(0);
 		eq(128,$s->get_uint8());
 		$s->truncate();
-
-		# uint8
-		$s->put_uint8(1 << 7);
+		
+		# 0111 1111 = 127
+		$s->put_int8(~(1 << 7));
 		$s->offset(0);
-		eq(-128,$s->get_int8());
-		$s->offset(0);
-		eq(128,$s->get_uint8());
+		eq(127,$s->get_uint8());
 		$s->truncate();
 		
 		# int16 be
+		# 1000 0000 0000 0000 = -32768
 		$s->put_int16_be(1 << 15);
 		$s->offset(0);
 		eq(-32768,$s->get_int16_be());
+		$s->truncate();
+		
+		# 0111 1111 1111 1111 = 32767
+		$s->put_int16_be(~(1 << 15));
 		$s->offset(0);
-		eq(32768,$s->get_uint16_be());
+		eq(32767,$s->get_int16_be());
 		$s->truncate();
 		
 		# int16 le
+		# 0000 0000 1000 0000 = -32768
 		$s->put_int16_le(1 << 15);
 		$s->offset(0);
 		eq(-32768,$s->get_int16_le());
+		$s->truncate();
+		
+		# 1111 1111 01111 1111 = 32767
+		$s->put_int16_le(~(1 << 15));
 		$s->offset(0);
-		eq(32768,$s->get_uint16_le());
+		eq(32767,$s->get_uint16_le());
 		$s->truncate();
 		
 		# uint16 be
+		# 1000 0000 0000 0000 = 32768
 		$s->put_uint16_be(1 << 15);
-		$s->offset(0);
-		eq(-32768,$s->get_int16_be());
 		$s->offset(0);
 		eq(32768,$s->get_uint16_be());
 		$s->truncate();
 		
-		# uint16 le
-		$s->put_uint16_le(1 << 15);
+		# 0111 1111 1111 1111 = 32767
+		$s->put_uint16_be(~(1 << 15));
 		$s->offset(0);
-		eq(-32768,$s->get_int16_le());
+		eq(32767,$s->get_uint16_be());
+		$s->truncate();
+		
+		# uint16 le
+		# 0000 0000 1000 0000 = 32768
+		$s->put_uint16_le(1 << 15);
 		$s->offset(0);
 		eq(32768,$s->get_uint16_le());
 		$s->truncate();
 		
+		# 1111 1111 0111 1111 = 32767
+		$s->put_uint16_le(~(1 << 15));
+		$s->offset(0);
+		eq(32767,$s->get_uint16_le());
+		$s->truncate();
+		
 		# int32 be
+		# 1000 0000 0000 0000 0000 0000 0000 0000 = -2147483648
 		$s->put_int32_be(1 << 31);
 		$s->offset(0);
-		eq(-2147483647,$s->get_int32_be());
+		eq(1 << 31,$s->get_int32_be());
+		$s->truncate();
+		
+		# 0111 1111 1111 1111 1111 1111 1111 1111 = 2147483647
+		$s->put_int32_be(~(1 << 31));
 		$s->offset(0);
-		eq(2147483647,$s->get_uint32_be());
+		eq(~(1 << 31),$s->get_int32_be());
+		$s->truncate();
+		
+		# int32 le
+		# 0000 0000 0000 0000 1000 0000 0000 0000 = -2147483648
+		$s->put_int32_le(1 << 31);
+		$s->offset(0);
+		eq(1 << 31,$s->get_int32_le());
+		$s->truncate();
+		
+		# uint32 be
+		# 1000 0000 0000 0000 0000 0000 0000 0000 = 2147483648 = -2147483648 (int32)
+		$s->put_uint32_be(1 << 31);
+		$s->offset(0);
+		eq(1 << 31,$s->get_uint32_be());
+		$s->truncate();
+		
+		# 0111 1111 1111 1111 1111 1111 1111 1111 = 2147483647
+		$s->put_uint32_be(~(1 << 31));
+		$s->offset(0);
+		eq(~(1 << 31),$s->get_uint32_be());
+		$s->truncate();
+		
+		# uint32 le
+		# 0000 0000 0000 0000 1000 0000 0000 0000 = 2147483648
+		$s->put_uint32_le(1 << 31);
+		$s->offset(0);
+		eq(1 << 31,$s->get_uint32_le());
+		$s->truncate();
+		
+		# 1111 1111 1111 1111 0111 1111 1111 1111 = 2147483647
+		$s->put_uint32_le(~(1 << 31));
+		$s->offset(0);
+		eq(~(1 << 31),$s->get_uint32_le());
 		$s->truncate();
 	 */
 }

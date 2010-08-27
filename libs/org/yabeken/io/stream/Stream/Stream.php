@@ -45,7 +45,7 @@ abstract class Stream extends Object{
 	 */
 	final public function get_int16_be(){
 		$r = $this->get_uint16_be();
-		return $r < 0x8000 ? $r : $r - 0x10000;
+		return $r < 0x8000 ? $r : ~($r - 1);
 	}
 	/**
 	 * get 16bit signed integer by little endian order
@@ -53,7 +53,7 @@ abstract class Stream extends Object{
 	 */
 	final public function get_int16_le(){
 		$r = $this->get_uint16_le();
-		return $r < 0x8000 ? $r : $r - 0x10000;
+		return $r < 0x8000 ? $r : ~($r - 1);
 	}
 	/**
 	 * get 16bit unsigned integer by big endian order
@@ -75,14 +75,15 @@ abstract class Stream extends Object{
 	 */
 	final public function get_int32_be(){
 		$r = $this->get_uint32_be();
-		return $r < 0x80000000 ? $r : ~($r-1);
+		return $r < 0x80000000 ? $r : ~($r - 1);
 	}
 	/**
 	 * get 32bit signed integer by big little order
 	 * @return integer
 	 */
 	final public function get_int32_le(){
-		
+		$r = $this->get_uint32_le();
+		return $r < 0x80000000 ? $r : ~($r - 1);
 	}
 	/**
 	 * get 32bit unsigned integer by big endian order
@@ -156,7 +157,8 @@ abstract class Stream extends Object{
 	 * @param integer $value
 	 */
 	final public function put_int32_le($value){
-		
+		$value &= 0xFFFFFFFF;
+		$this->put_uint32_le(($value < 0) ? (~$value) + 1 : $value);
 	}
 	/**
 	 * put value as 32bit unsigned integer by big endian order

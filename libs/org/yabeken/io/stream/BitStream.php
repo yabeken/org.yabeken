@@ -69,6 +69,13 @@ class BitStream extends Stream{
 	public function write($str){
 		return $this->_resource_->write($str);
 	}
+	/**
+	 * trucate
+	 */
+	public function truncate(){
+		$this->_resource_->truncate();
+		$this->clear_buffer();
+	}
 	public function is_opened(){
 		return $this->_resource_->is_opened();
 	}

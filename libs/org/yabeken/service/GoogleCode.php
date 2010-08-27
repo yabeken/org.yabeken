@@ -1,11 +1,12 @@
 <?php
+import('org.rhaco.service.GoogleAuth');
 /**
  * Google Code 上のファイルを扱うライブラリ
  *
  * @author Kentaro YABE
  * @license New BSD License
  */
-class GoogleCode extends Http{
+class GoogleCode extends GoogleAuth{
 	const SEARCH_ALL = 1;
 	const SEARCH_CURRENT = 2;
 	const SEARCH_FEATURED = 3;
@@ -35,30 +36,13 @@ class GoogleCode extends Http{
 		$this->project = $project;
 	}
 	/**
-	 * Google へのログイン
-	 *
-	 * @param string $email
-	 * @param string $password
-	 * @return boolean
-	 */
-	public function login($email,$password){
-		$this->logged_in = false;
-		$this->do_get("https://www.google.com/accounts/ServiceLogin");
-		$this->vars("Email",$email);
-		$this->vars("Passwd",$password);
-		$this->submit();
-		$this->logged_in = (strpos($this->url,"https://www.google.com/accounts/CheckCookie?chtml=LoginDoneHtml") === 0);
-		return $this->logged_in;
-	}
-	/**
 	 * ファイルをアップロードする
-	 *
 	 * @param string $summary
 	 * @param File $file
 	 * @param string $label
 	 */
 	public function upload(File $file,array $labels,$summary=null){
-		if(!$this->logged_in) throw new Exception("not logged in");
+		if(!$this->is_login()) throw new GoogleAuthException("not logged in");
 		$this->do_get(sprintf("http://code.google.com/p/%s/downloads/entry",$this->project));
 		$this->vars("file",$file);
 		$summary = empty($summary) ? $file->name() : $summary;
@@ -72,7 +56,7 @@ class GoogleCode extends Http{
 	 * @param string $filename
 	 */
 	public function delete($filename){
-		if(!$this->logged_in) throw new Exception("not logged in");
+		if(!$this->is_login()) throw new GoogleAuthException("not logged in");
 		$this->do_get(sprintf("http://code.google.com/p/%s/downloads/delete?name=%s",$this->project,$filename));
 		if($this->status != 404) $this->submit(2,"delete");
 	}

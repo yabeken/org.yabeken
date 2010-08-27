@@ -18,7 +18,10 @@ class PdfAnnot extends PdfObj{
 	protected $C;
 	protected $StructParent;
 	protected $OC;
-	protected function __choices_F__(){
+	final protected function __choices_F__(){
 		return array(1,2,3,4,5,6,7,8,9,10);
+	}
+	final protected function __choices_C__(){
+		return array(0,1,3,4);
 	}
 }

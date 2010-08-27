@@ -1,6 +1,6 @@
 <?php
-import("org.yabeken.io.TextStream");
-import("org.yabeken.io.FileStream");
+import("org.yabeken.io.stream.TextStream");
+import("org.yabeken.io.stream.FileStream");
 module("PdfException");
 module("PdfObj");
 module("PdfParser");
