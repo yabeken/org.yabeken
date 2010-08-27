@@ -10,10 +10,20 @@ class BitStream extends Stream{
 	/**
 	 * Constructor
 	 * @param Stream $resource
+	 * @throws InvalidArgumentException
 	 */
 	final protected function __new__(Stream $resource){
+		if(!($resource instanceof Stream)) throw new InvalidArgumentException('Stream is required');
 		$this->_resource_ = $resource;
 		$this->clear_buffer();
+		/***
+			try{
+				new BitStream();
+				fail();
+			}catch(Exception $e){
+				success();
+			}
+		 */
 	}
 	/**
 	 * Destructor
@@ -123,6 +133,20 @@ class BitStream extends Stream{
 		$r = 1 & (ord($this->_buf_) >> (8 - ++$this->offset));
 		if($this->offset == 8) $this->clear_buffer();
 		return (int)$r;
+		/***
+			$s = new BitStream(R('org.yabeken.io.stream.TextStream'));
+			
+			$s->put_int8(1 << 7)
+			  ->offset(0);
+			eq(1,$s->get_bit());
+			eq(0,$s->get_bits(7));
+			
+			$s->truncate()
+			  ->put_int8(1 << 7 | 1 << 5)
+			  ->offset(0);
+			eq(2,$s->get_bits(2));
+			eq(8,$s->get_bits(4));
+		 */
 	}
 	/**
 	 * read bits
@@ -135,6 +159,20 @@ class BitStream extends Stream{
 			$r = ($r << 1) | $this->get_bit();
 		}
 		return $r;
+		/***
+			$s = new BitStream(R('org.yabeken.io.stream.TextStream'));
+			
+			$s->put_int8(1 << 7)
+			  ->offset(0);
+			eq(1,$s->get_bit());
+			eq(0,$s->get_bits(7));
+			
+			$s->truncate()
+			  ->put_int8(1 << 7 | 1 << 5)
+			  ->offset(0);
+			eq(2,$s->get_bits(2));
+			eq(8,$s->get_bits(4));
+		 */
 	}
 	/**
 	 * put a bit
@@ -161,19 +199,4 @@ class BitStream extends Stream{
 		$this->_buf_ = null;
 		$this->offset = 0;
 	}
-	/***
-		# get_bit / get_bits
-		$s = new BitStream(R('org.yabeken.io.stream.TextStream'));
-		
-		$s->put_int8(1 << 7)
-		  ->offset(0);
-		eq(1,$s->get_bit());
-		eq(0,$s->get_bits(7));
-		
-		$s->truncate()
-		  ->put_int8(1 << 7 | 1 << 5)
-		  ->offset(0);
-		eq(2,$s->get_bits(2));
-		eq(8,$s->get_bits(4));
-	 */
 }
