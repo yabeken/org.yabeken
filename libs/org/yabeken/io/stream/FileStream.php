@@ -15,21 +15,7 @@ class FileStream extends Stream{
 	protected function __set_offset__($offset){
 		fseek($this->_resource_,$offset,self::SEEK_SET);
 		$this->offset = ftell($this->_resource_);
-		return $this->offset;
-	}
-	/**
-	 * ファイルハンドルが開かれているか
-	 * @return boolean
-	 */
-	public function is_opened(){
-		return is_resource($this->_resource_);
-	}
-	/**
-	 * ファイルハンドルが閉じられているか
-	 * @return boolean
-	 */
-	public function is_closed(){
-		return !$this->is_opened();
+		return $this;
 	}
 	/**
 	 * ファイルを開く
@@ -42,6 +28,7 @@ class FileStream extends Stream{
 		$this->_resource_ = fopen($filename,$mode==null?"rb+":$mode);
 		$this->seek(0,self::SEEK_SET);
 		$this->length = filesize($filename);
+		return $this;
 	}
 	/**
 	 * ファイルを閉じる
@@ -182,23 +169,6 @@ class FileStream extends Stream{
 		return $this->offset + $offset;
 	}
 	/**
-	 * 終端かどうか
-	 * @return boolean
-	 */
-	public function eof(){
-		/***
-			$fname = File::temp_path(work_path());
-			File::write($fname,"hogehoge\rfugafuga\nfoobar\r\nkonokodokonoko");
-			$s = new FileStream($fname);
-			eq(false,$s->eof());
-			$s->read();
-			eq(true,$s->eof());
-			$s->close();
-			File::rm($fname);
-		 */
-		return feof($this->_resource_) || $this->offset >= $this->length;
-	}
-	/**
 	 * 文字列を追記
 	 * @param string $str
 	 */
@@ -218,14 +188,46 @@ class FileStream extends Stream{
 		fwrite($this->_resource_,$str);
 		$this->offset = ftell($this->_resource_);
 		$this->length += strlen($str);
-		return $this->offset;
+		return $this;
 	}
 	/**
-	 * truncate
+	 * 空にする
 	 */
 	public function truncate(){
 		ftruncate($this->_resource_, 0);
 		$this->offset = 0;
 		$this->length = 0;
+		return $this;
+	}
+	/**
+	 * 終端か
+	 * @return boolean
+	 */
+	public function is_eof(){
+		return feof($this->_resource_) || $this->offset >= $this->length;
+		/***
+			$fname = File::temp_path(work_path());
+			File::write($fname,"hogehoge\rfugafuga\nfoobar\r\nkonokodokonoko");
+			$s = new FileStream($fname);
+			eq(false,$s->eof());
+			$s->read();
+			eq(true,$s->eof());
+			$s->close();
+			File::rm($fname);
+		 */
+	}
+	/**
+	 * ハンドルが開かれているか
+	 * @return boolean
+	 */
+	public function is_opened(){
+		return is_resource($this->_resource_);
+	}
+	/**
+	 * ハンドルが閉じられているか
+	 * @return boolean
+	 */
+	public function is_closed(){
+		return !$this->is_opened();
 	}
 }

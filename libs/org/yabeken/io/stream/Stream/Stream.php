@@ -103,82 +103,92 @@ abstract class Stream extends Object{
 	/**
 	 * put value as 8bit signed integer
 	 * @param integer $value
+	 * @return $this
 	 */
 	final public function put_int8($value){
-		$this->write_pack($value, 'c');
+		return $this->write_pack($value, 'c');
 	}
 	/**
 	 * put value as 8bit unsigned integer
 	 * @param integer $value
+	 * @return $this
 	 */
 	final public function put_uint8($value){
-		$this->write_pack($value, 'C');
+		return $this->write_pack($value, 'C');
 	}
 	/**
 	 * put value as 16bit signed integer by big endian order
 	 * @param integer $value
+	 * @return $this
 	 */
 	final public function put_int16_be($value){
 		$value &= 0xFFFF;
-		$this->put_uint16_be(($value < 0) ? $value + 0x10000 : $value);
-		
+		return $this->put_uint16_be(($value < 0) ? $value + 0x10000 : $value);
 	}
 	/**
 	 * put value as 16bit signed integer by little endian order
 	 * @param integer $value
+	 * @return $this
 	 */
 	final public function put_int16_le($value){
 		$value &= 0xFFFF;
-		$this->put_uint16_le(($value < 0) ? $value + 0x10000 : $value);
+		return $this->put_uint16_le(($value < 0) ? $value + 0x10000 : $value);
 	}
 	/**
 	 * put value as 16bit unsigned integer by big endian order
 	 * @param integer $value
+	 * @return $this
 	 */
 	final public function put_uint16_be($value){
-		$this->write_pack($value, 'n');
+		return $this->write_pack($value, 'n');
 	}
 	/**
 	 * put value as 16bit unsigned integer by little endian order
 	 * @param integer $value
+	 * @return $this
 	 */
 	final public function put_uint16_le($value){
-		$this->write_pack($value, 'v');
+		return $this->write_pack($value, 'v');
 	}
 	/**
 	 * put value as 32bit signed integer by big endian order
 	 * @param integer $value
+	 * @return $this
 	 */
 	final public function put_int32_be($value){
 		$value &= 0xFFFFFFFF;
-		$this->put_uint32_be(($value < 0) ? (~$value) + 1 : $value);
+		return $this->put_uint32_be(($value < 0) ? (~$value) + 1 : $value);
 	}
 	/**
 	 * put value as 32bit signed integer by little endian order
 	 * @param integer $value
+	 * @return $this
 	 */
 	final public function put_int32_le($value){
 		$value &= 0xFFFFFFFF;
-		$this->put_uint32_le(($value < 0) ? (~$value) + 1 : $value);
+		return $this->put_uint32_le(($value < 0) ? (~$value) + 1 : $value);
 	}
 	/**
 	 * put value as 32bit unsigned integer by big endian order
 	 * @param integer $value
+	 * @return $this
 	 */
 	final public function put_uint32_be($value){
-		$this->write_pack($value, 'N');
+		return $this->write_pack($value, 'N');
 	}
 	/**
 	 * put value as 32bit unsigned integer by little endian order
 	 * @param integer $value
+	 * @return $this
 	 */
 	final public function put_uint32_le($value){
-		$this->write_pack($value, 'V');
+		return $this->write_pack($value, 'V');
 	}
 	/**
 	 * read and unpack
 	 * @param integer $length
 	 * @param string $format
+	 * @return mixed
 	 */
 	final protected function read_unpack($length,$format){
 		list(,$r) = unpack($format,$this->read($length));
@@ -188,8 +198,10 @@ abstract class Stream extends Object{
 	 * pack and write
 	 * @param mixed $value
 	 * @param string $format
+	 * @return $this
 	 */
 	final protected function write_pack($value,$format){
 		$this->write(pack($format,$value));
+		return $this;
 	}
 }

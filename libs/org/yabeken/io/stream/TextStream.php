@@ -11,23 +11,26 @@ class TextStream extends Stream{
 	 * @param string $resource
 	 */
 	final protected function __new__($resource=null){
-		$this->open($resource);
+		if($resource !== null) $this->open($resource);
 	}
 	/**
 	 * ポインタオフセットを設定する
 	 * @param integer $offset
+	 * @return $this;
 	 * @throws StreamException
 	 */
 	protected function __set_offset__($offset){
 		if($offset < 0 || $offset > $this->length) throw new StreamException("invalid offset");
 		$this->offset = $offset;
-		return $this->offset;
+		return $this;
 	}
 	/**
 	 * 開く
 	 * @param string $resource
+	 * @throws InvalidArgumentException
 	 */
 	public function open($resource,$mode=null){
+		if(!is_string($resource)) throw new InvalidArgumentException('invalid argument');
 		$this->_resource_ = $resource;
 		$this->offset = 0;
 		$this->length = strlen($this->_resource_);
@@ -61,11 +64,11 @@ class TextStream extends Stream{
 		}
 		/***
 			$s = new TextStream("hogehoge");
-			eq(1,$s->seek(1));
-			eq(2,$s->seek(1));
-			eq(8,$s->seek(0,SEEK_END));
-			eq(7,$s->seek(-1,SEEK_END));
-			eq(5,$s->seek(5,SEEK_SET));
+			eq(1,$s->seek(1)->offset());
+			eq(2,$s->seek(1)->offset());
+			eq(8,$s->seek(0,SEEK_END)->offset());
+			eq(7,$s->seek(-1,SEEK_END)->offset());
+			eq(5,$s->seek(5,SEEK_SET)->offset());
 		 */
 	}
 	/**
@@ -154,11 +157,13 @@ class TextStream extends Stream{
 	}
 	/**
 	 * 空にする
+	 * @return $this
 	 */
 	public function truncate(){
 		$this->_resource_ = null;
 		$this->offset = 0;
 		$this->length = 0;
+		return $this;
 	}
 	/**
 	 * ポインタが終端かどうか
@@ -196,126 +201,89 @@ class TextStream extends Stream{
 		
 		# int8 
 		# 1000 0000 = -128
-		$s->put_int8(1 << 7);
-		$s->offset(0);
+		$s->truncate()->put_int8(1 << 7)->offset(0);
 		eq(-128,$s->get_int8());
-		$s->truncate();
 		
 		# 0111 1111 = 127
-		$s->put_int8(~(1 << 7));
-		$s->offset(0);
+		$s->truncate()->put_int8(~(1 << 7))->offset(0);
 		eq(127,$s->get_int8());
-		$s->truncate();
 		
 		# uint8
 		# 1000 0000 = 128
-		$s->put_uint8(1 << 7);
-		$s->offset(0);
+		$s->truncate()->put_uint8(1 << 7)->offset(0);
 		eq(128,$s->get_uint8());
-		$s->truncate();
 		
 		# 0111 1111 = 127
-		$s->put_int8(~(1 << 7));
-		$s->offset(0);
+		$s->truncate()->put_int8(~(1 << 7))->offset(0);
 		eq(127,$s->get_uint8());
-		$s->truncate();
 		
 		# int16 be
 		# 1000 0000 0000 0000 = -32768
-		$s->put_int16_be(1 << 15);
-		$s->offset(0);
+		$s->truncate()->put_int16_be(1 << 15)->offset(0);
 		eq(-32768,$s->get_int16_be());
-		$s->truncate();
 		
 		# 0111 1111 1111 1111 = 32767
-		$s->put_int16_be(~(1 << 15));
-		$s->offset(0);
+		$s->truncate()->put_int16_be(~(1 << 15))->offset(0);
 		eq(32767,$s->get_int16_be());
-		$s->truncate();
 		
 		# int16 le
 		# 0000 0000 1000 0000 = -32768
-		$s->put_int16_le(1 << 15);
-		$s->offset(0);
+		$s->truncate()->put_int16_le(1 << 15)->offset(0);
 		eq(-32768,$s->get_int16_le());
-		$s->truncate();
+		$s;
 		
 		# 1111 1111 01111 1111 = 32767
-		$s->put_int16_le(~(1 << 15));
-		$s->offset(0);
+		$s->truncate()->put_int16_le(~(1 << 15))->offset(0);
 		eq(32767,$s->get_uint16_le());
-		$s->truncate();
 		
 		# uint16 be
 		# 1000 0000 0000 0000 = 32768
-		$s->put_uint16_be(1 << 15);
-		$s->offset(0);
+		$s->truncate()->put_uint16_be(1 << 15)->offset(0);
 		eq(32768,$s->get_uint16_be());
-		$s->truncate();
 		
 		# 0111 1111 1111 1111 = 32767
-		$s->put_uint16_be(~(1 << 15));
-		$s->offset(0);
+		$s->truncate()->put_uint16_be(~(1 << 15))->offset(0);
 		eq(32767,$s->get_uint16_be());
-		$s->truncate();
 		
 		# uint16 le
 		# 0000 0000 1000 0000 = 32768
-		$s->put_uint16_le(1 << 15);
-		$s->offset(0);
+		$s->truncate()->put_uint16_le(1 << 15)->offset(0);
 		eq(32768,$s->get_uint16_le());
-		$s->truncate();
 		
 		# 1111 1111 0111 1111 = 32767
-		$s->put_uint16_le(~(1 << 15));
-		$s->offset(0);
+		$s->truncate()->put_uint16_le(~(1 << 15))->offset(0);
 		eq(32767,$s->get_uint16_le());
-		$s->truncate();
 		
 		# int32 be
 		# 1000 0000 0000 0000 0000 0000 0000 0000 = -2147483648
-		$s->put_int32_be(1 << 31);
-		$s->offset(0);
+		$s->truncate()->put_int32_be(1 << 31)->offset(0);
 		eq(1 << 31,$s->get_int32_be());
-		$s->truncate();
 		
 		# 0111 1111 1111 1111 1111 1111 1111 1111 = 2147483647
-		$s->put_int32_be(~(1 << 31));
-		$s->offset(0);
+		$s->truncate()->put_int32_be(~(1 << 31))->offset(0);
 		eq(~(1 << 31),$s->get_int32_be());
-		$s->truncate();
 		
 		# int32 le
 		# 0000 0000 0000 0000 1000 0000 0000 0000 = -2147483648
-		$s->put_int32_le(1 << 31);
-		$s->offset(0);
+		$s->truncate()->put_int32_le(1 << 31)->offset(0);
 		eq(1 << 31,$s->get_int32_le());
-		$s->truncate();
 		
 		# uint32 be
 		# 1000 0000 0000 0000 0000 0000 0000 0000 = 2147483648 = -2147483648 (int32)
-		$s->put_uint32_be(1 << 31);
-		$s->offset(0);
+		$s->truncate()->put_uint32_be(1 << 31)->offset(0);
 		eq(1 << 31,$s->get_uint32_be());
-		$s->truncate();
 		
 		# 0111 1111 1111 1111 1111 1111 1111 1111 = 2147483647
-		$s->put_uint32_be(~(1 << 31));
-		$s->offset(0);
+		$s->truncate()->put_uint32_be(~(1 << 31))->offset(0);
 		eq(~(1 << 31),$s->get_uint32_be());
-		$s->truncate();
 		
 		# uint32 le
 		# 0000 0000 0000 0000 1000 0000 0000 0000 = 2147483648
-		$s->put_uint32_le(1 << 31);
-		$s->offset(0);
+		$s->truncate()->put_uint32_le(1 << 31)->offset(0);
 		eq(1 << 31,$s->get_uint32_le());
-		$s->truncate();
 		
 		# 1111 1111 1111 1111 0111 1111 1111 1111 = 2147483647
-		$s->put_uint32_le(~(1 << 31));
-		$s->offset(0);
+		$s->truncate()->put_uint32_le(~(1 << 31))->offset(0);
 		eq(~(1 << 31),$s->get_uint32_le());
-		$s->truncate();
 	 */
 }

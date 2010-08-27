@@ -1,7 +1,7 @@
 <?php
 import('org.yabeken.io.stream.Stream');
 /**
- * Bit単位のバイナリファイルの入出力ライブラリ
+ * Bit Stream
  * @author yabeken
  * @license New BSD License
  */
@@ -13,6 +13,7 @@ class BitStream extends Stream{
 	 */
 	final protected function __new__(Stream $resource){
 		$this->_resource_ = $resource;
+		$this->clear_buffer();
 	}
 	/**
 	 * Destructor
@@ -25,48 +26,62 @@ class BitStream extends Stream{
 	 * @return array(byte-offset, bit-offset)
 	 */
 	protected function __get_offset__(){
-		return array($this->_resource_->offset(),$this->offset);
+		$offset = $this->_resource_->offset();
+		return array($offset == 0 ? 0 : $offset - 1,$this->offset);
 	}
 	/**
 	 * set offset
 	 * @param integer $byte
 	 * @param integer $bit
+	 * @return $this
 	 * @throws StreamException
 	 */
 	protected function __set_offset__($byte,$bit=0){
+		//TODO
 		if($bit < 0 || $bit > 8) throw new StreamException('invalid bit offset {1}',$bit);
 		$this->_resource_->offset($byte);
 		$this->offset = $bit;
+		return $this;
 	}
 	protected function __get_length__(){
-		return $this->_resource_->length();
+		return $this->_resource_->length() + ($this->offset == 0 ? 0 : 1);
 	}
+	/**
+	 * 開く
+	 * @param mixed $resource
+	 * @param string $mode
+	 * @return $this
+	 */
 	public function open($resource,$mode=null){
-		return $this->_resource_->open($resource,$mode);
+		$this->_resource_->open($resource,$mode);
+		$this->clear_buffer();
+		return $this;
 	}
+	/**
+	 * 閉じる
+	 */
 	public function close(){
-		return $this->_resource_->close();
+		$this->_resource_->close();
+		$this->truncate();
 	}
 	public function seek($len,$mode=null){
-		$this->offset = 0;
-		$this->_buf_ = null;
+		$this->clear_buffer();
+		//TODO
 		return $this->_resource_->seek($len,$mode);
 	}
+	public function search($needle,$invert=false,$limit=null){
+		throw new StreamException('not implemented');
+	}
 	public function read($len=2048){
-		$this->offset = 0;
-		$this->_buf_ = null;
+		//TODO
+		$this->clear_buffer();
 		return $this->_resource_->read($len);
 	}
 	public function read_line($strict=false){
 		throw new StreamException('not implemented');
 	}
-	public function search($needle,$invert=false,$limit=null){
-		throw new StreamException('not implemented');
-	}
-	public function eof(){
-		return $this->_resource_->eof();
-	}
 	public function write($str){
+		//TODO
 		return $this->_resource_->write($str);
 	}
 	/**
@@ -75,10 +90,26 @@ class BitStream extends Stream{
 	public function truncate(){
 		$this->_resource_->truncate();
 		$this->clear_buffer();
+		return $this;
 	}
+	/**
+	 * 終端か(non-PHPdoc)
+	 * @return boolean
+	 */
+	public function is_eof(){
+		return $this->_resource_->is_eof();
+	}
+	/**
+	 * ハンドルが開かれているか
+	 * @return boolean
+	 */
 	public function is_opened(){
 		return $this->_resource_->is_opened();
 	}
+	/**
+	 * ハンドルが閉じられているか
+	 * @return boolean
+	 */
 	public function is_closed(){
 		return $this->_resource_->is_closed();
 	}
@@ -87,21 +118,22 @@ class BitStream extends Stream{
 	 * @return binary
 	 */
 	public function get_bit(){
-		return $this->get_bits(1);
+		if($this->_buf_ === null) $this->_buf_ = $this->_resource_->read(1);
+		if($this->_buf_ === null) return;
+		$r = 1 & (ord($this->_buf_) >> (8 - ++$this->offset));
+		if($this->offset == 8) $this->clear_buffer();
+		return (int)$r;
 	}
 	/**
 	 * read bits
 	 * @param integer $length
 	 * @return binary
-	 * @throws InvalidArgumentException
 	 */
 	public function get_bits($length){
-		if(!is_int($length) || $length < 0) throw new InvalidArgumentException('invalid argument');
-		if($this->_buf_ === null){
-			$this->_buf_ = $this->_resource_->read(1);
+		$r = 0;
+		for($i=0;$i<$length;$i++){
+			$r = ($r << 1) | $this->get_bit();
 		}
-		$r = null;
-		$mask = ((0xFF << $this->_pos_) & 0xFF) >> $this->_pos_;
 		return $r;
 	}
 	/**
@@ -109,7 +141,11 @@ class BitStream extends Stream{
 	 * @param binary $value
 	 */
 	public function put_bit($value){
-		$this->put_bits(1,$value);
+		$this->_buf_ = ($this->_buf_ === null ? 0 : $this->_buf_) | (($value & 1) << (8 - ++$this->offset));
+		if($this->offset == 8){
+			$this->write($this->_buf_);
+			$this->clear_buffer();
+		}
 	}
 	/**
 	 * put bits
@@ -117,10 +153,27 @@ class BitStream extends Stream{
 	 * @param binary $bits
 	 */
 	public function put_bits($num,$bits){
-		if($this->_pos_ + $num <= 8){
-//			$mask = 
-		}else{
-			
+		for($i=$num-1;$i>=0;$i--){
+			$this->put_bit(($bits >> $i) & 1);
 		}
 	}
+	protected function clear_buffer(){
+		$this->_buf_ = null;
+		$this->offset = 0;
+	}
+	/***
+		# get_bit / get_bits
+		$s = new BitStream(R('org.yabeken.io.stream.TextStream'));
+		
+		$s->put_int8(1 << 7)
+		  ->offset(0);
+		eq(1,$s->get_bit());
+		eq(0,$s->get_bits(7));
+		
+		$s->truncate()
+		  ->put_int8(1 << 7 | 1 << 5)
+		  ->offset(0);
+		eq(2,$s->get_bits(2));
+		eq(8,$s->get_bits(4));
+	 */
 }
