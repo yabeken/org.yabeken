@@ -48,7 +48,7 @@ class BitStream extends Stream{
 	 */
 	protected function __set_offset__($byte,$bit=0){
 		//TODO
-		if($bit < 0 || $bit > 8) throw new StreamException('invalid bit offset {1}',$bit);
+		if($bit < 0 || $bit >= 8) throw new StreamException('invalid bit offset {1}',$bit);
 		$this->_resource_->offset($byte);
 		$this->offset = $bit;
 		return $this;
@@ -136,16 +136,15 @@ class BitStream extends Stream{
 		/***
 			$s = new BitStream(R('org.yabeken.io.stream.TextStream'));
 			
-			$s->put_int8(1 << 7)
-			  ->offset(0);
+			$s->put_int8(1 << 7 | 1 << 5 | 1 << 3 | 1 << 1)->offset(0);
 			eq(1,$s->get_bit());
-			eq(0,$s->get_bits(7));
-			
-			$s->truncate()
-			  ->put_int8(1 << 7 | 1 << 5)
-			  ->offset(0);
-			eq(2,$s->get_bits(2));
-			eq(8,$s->get_bits(4));
+			eq(0,$s->get_bit());
+			eq(1,$s->get_bit());
+			eq(0,$s->get_bit());
+			eq(1,$s->get_bit());
+			eq(0,$s->get_bit());
+			eq(1,$s->get_bit());
+			eq(0,$s->get_bit());
 		 */
 	}
 	/**
@@ -162,14 +161,11 @@ class BitStream extends Stream{
 		/***
 			$s = new BitStream(R('org.yabeken.io.stream.TextStream'));
 			
-			$s->put_int8(1 << 7)
-			  ->offset(0);
+			$s->put_int8(1 << 7)->offset(0);
 			eq(1,$s->get_bit());
 			eq(0,$s->get_bits(7));
 			
-			$s->truncate()
-			  ->put_int8(1 << 7 | 1 << 5)
-			  ->offset(0);
+			$s->truncate()->put_int8(1 << 7 | 1 << 5)->offset(0);
 			eq(2,$s->get_bits(2));
 			eq(8,$s->get_bits(4));
 		 */
@@ -184,6 +180,7 @@ class BitStream extends Stream{
 			$this->write($this->_buf_);
 			$this->clear_buffer();
 		}
+		return $this;
 	}
 	/**
 	 * put bits
@@ -194,6 +191,7 @@ class BitStream extends Stream{
 		for($i=$num-1;$i>=0;$i--){
 			$this->put_bit(($bits >> $i) & 1);
 		}
+		return $this;
 	}
 	protected function clear_buffer(){
 		$this->_buf_ = null;
