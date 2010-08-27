@@ -13,24 +13,15 @@ class TextStream extends Stream{
 	final protected function __new__($resource=null){
 		$this->open($resource);
 	}
+	/**
+	 * ポインタオフセットを設定する
+	 * @param integer $offset
+	 * @throws StreamException
+	 */
 	protected function __set_offset__($offset){
 		if($offset < 0 || $offset > $this->length) throw new StreamException("invalid offset");
 		$this->offset = $offset;
 		return $this->offset;
-	}
-	/**
-	 * ファイルハンドルが開かれているか
-	 * @return boolean
-	 */
-	public function is_opened(){
-		return true;
-	}
-	/**
-	 * ファイルハンドルが閉じられているか
-	 * @return boolean
-	 */
-	public function is_closed(){
-		return !$this->is_opened();
 	}
 	/**
 	 * 開く
@@ -46,22 +37,20 @@ class TextStream extends Stream{
 	 */
 	public function close(){
 		$this->truncate();
-	}
-	/**
-	 * ポインタを変更する
-	 * @param integer $len
-	 * @param integer $mode
-	 */
-	public function seek($len,$mode=null){
 		/***
 			$s = new TextStream("hogehoge");
-			eq(1,$s->seek(1));
-			eq(2,$s->seek(1));
-			eq(8,$s->seek(0,SEEK_END));
-			eq(7,$s->seek(-1,SEEK_END));
-			eq(5,$s->seek(5,SEEK_SET));
+			eq(8,$s->length());
+			$s->truncate();
+			eq(null,$s->read());
 		 */
-		switch($mode===null ? SEEK_CUR : $mode){
+	}
+	/**
+	 * ポインタを現在位置から変更する
+	 * @param integer $len
+	 * @param integer $mode SEEK_CUR,SEEK_END,SEEK_SET
+	 */
+	public function seek($len,$mode=null){
+		switch($mode === null ? SEEK_CUR : $mode){
 			case self::SEEK_SET:
 				return $this->__set_offset__($len);
 			case self::SEEK_END:
@@ -70,13 +59,45 @@ class TextStream extends Stream{
 			case self::SEEK_CUR:
 				return $this->__set_offset__($this->offset + $len);
 		}
+		/***
+			$s = new TextStream("hogehoge");
+			eq(1,$s->seek(1));
+			eq(2,$s->seek(1));
+			eq(8,$s->seek(0,SEEK_END));
+			eq(7,$s->seek(-1,SEEK_END));
+			eq(5,$s->seek(5,SEEK_SET));
+		 */
 	}
 	/**
-	 * 現在位置から指定バイト分読み込む
+	 * 指定した文字が出現するオフセットを取得
+	 * @param string $needle
+	 * @param boolean $invert true の際は指定した文字が出現しない最後のオフセット
+	 * @param integer $limit
+	 */
+	public function search($needle,$invert=false,$limit=null){
+		//TODO $invert -> $mode
+		$offset = $invert ? strcspn($this->_resource_,$needle,$this->offset) : strpos($this->_resource_,$needle,$this->offset);
+		if($offset === false || (is_numeric($limit) && $offset > $limit)) return false;
+		return $invert ? $this->offset + $offset : $offset;
+		/***
+			$s = new TextStream("abcdefghijklmnopqrstuvwxyz");
+			eq(false,$s->search("hoge"));
+			eq(4,$s->search("e"));
+			eq(false,$s->search("e",false,2));
+			eq(4,$s->search("gfe",true));
+		 */
+	}
+	/**
+	 * 現在位置から指定バイト分読み込む．終端に達した場合にはその位置まで読み込む．
 	 * @param integer $len
 	 * @return string
 	 */
 	public function read($len=2048){
+		if($this->offset + $len < 0) $len = -1 * $this->offset;
+		if($this->offset + $len > $this->length) $len = $this->length - $this->offset;
+		$buf = ($len < 0) ? substr($this->_resource_,$this->offset + $len,-1 * $len) : substr($this->_resource_,$this->offset,$len);
+		$this->offset = $this->offset + $len;
+		return $buf === false ? null : $buf;
 		/***
 			$s = new TextStream("hogehoge");
 			eq("h",$s->read(1));
@@ -84,24 +105,14 @@ class TextStream extends Stream{
 			eq("oge",$s->read(-3));
 			eq(5,$s->offset());
 		 */
-		if($this->offset + $len < 0) $len = -1 * $this->offset;
-		if($this->offset + $len > $this->length) $len = $this->length - $this->offset;
-		$buf = ($len < 0) ? substr($this->_resource_,$this->offset + $len,-1 * $len) : substr($this->_resource_,$this->offset,$len);
-		$this->offset = $this->offset + $len;
-		return $buf;
 	}
 	/**
 	 * 一行読み込む
+	 * @param boolean $strict 改行が混在している場合には，
 	 * @return string
 	 */
 	public function read_line($strict=false){
-		/***
-			$s = new TextStream("hogehoge\rfugafuga\nfoobar\r\nkonokodokonoko");
-			eq("hogehoge\r",$s->read_line());
-			eq("fugafuga\n",$s->read_line());
-			eq("foobar\r\n",$s->read_line());
-		 */
-		$buf = "";
+		$buf = '';
 		while(true){
 			if($this->offset >= $this->length) break;
 			$c = $this->read(1);
@@ -117,43 +128,22 @@ class TextStream extends Stream{
 			if($c == "\n") break;
 		}
 		return $buf;
-	}
-	/**
-	 * 指定した文字が出現するオフセットを取得
-	 * @param string $needle
-	 * @param boolean $invert true の際は指定した文字が出現しない最後のオフセット
-	 * @param integer $limit
-	 */
-	public function search($needle,$invert=false,$limit=null){
-		/***
-			$s = new TextStream("abcdefghijklmnopqrstuvwxyz");
-			eq(false,$s->search("hoge"));
-			eq(4,$s->search("e"));
-			eq(false,$s->search("e",false,2));
-			eq(4,$s->search("gfe",true));
-		 */
-		$offset = $invert ? strcspn($this->_resource_,$needle,$this->offset) : strpos($this->_resource_,$needle,$this->offset);
-		if($offset === false || (is_numeric($limit) && $offset > $limit)) return false;
-		return $invert ? $this->offset + $offset : $offset;
-	}
-	/**
-	 * 終端かどうか
-	 * @return boolean
-	 */
-	public function eof(){
 		/***
 			$s = new TextStream("hogehoge\rfugafuga\nfoobar\r\nkonokodokonoko");
-			eq(false,$s->eof());
-			$s->read();
-			eq(true,$s->eof());
+			eq("hogehoge\r",$s->read_line());
+			eq("fugafuga\n",$s->read_line());
+			eq("foobar\r\n",$s->read_line());
 		 */
-		return $this->offset == $this->length;
 	}
 	/**
 	 * append value
 	 * @param string $value
 	 */
 	public function write($value){
+		$this->_resource_ .= $value;
+		$this->length += strlen($value);
+		$this->offset = $this->length;
+		return $this->offset;
 		/***
 			$s = new TextStream("hoge");
 			eq(8,$s->write("fuga"));
@@ -161,18 +151,41 @@ class TextStream extends Stream{
 			$s->offset(0);
 			eq("hogefuga",$s->read());
 		 */
-		$this->_resource_ .= $value;
-		$this->length += strlen($value);
-		$this->offset = $this->length;
-		return $this->offset;
 	}
 	/**
-	 * truncate
+	 * 空にする
 	 */
 	public function truncate(){
 		$this->_resource_ = null;
 		$this->offset = 0;
 		$this->length = 0;
+	}
+	/**
+	 * ポインタが終端かどうか
+	 * @return boolean
+	 */
+	public function is_eof(){
+		return $this->offset == $this->length;
+		/***
+			$s = new TextStream("hogehoge\rfugafuga\nfoobar\r\nkonokodokonoko");
+			eq(false,$s->is_eof());
+			$s->read();
+			eq(true,$s->is_eof());
+		 */
+	}
+	/**
+	 * ハンドルが開かれているか
+	 * @return boolean
+	 */
+	public function is_opened(){
+		return true;
+	}
+	/**
+	 * ハンドルが閉じられているか
+	 * @return boolean
+	 */
+	public function is_closed(){
+		return !$this->is_opened();
 	}
 	/***
 		# Stream Test with TextStream

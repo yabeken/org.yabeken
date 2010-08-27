@@ -17,12 +17,13 @@ abstract class Stream extends Object{
 	abstract public function open($resource,$mode=null);
 	abstract public function close();
 	abstract public function seek($len,$mode=null);
+	//TODO $invert -> $mode
+	abstract public function search($needle,$invert=false,$limit=null);
 	abstract public function read($len=2048);
 	abstract public function read_line($strict=false);
-	abstract public function search($needle,$invert=false,$limit=null);
-	abstract public function eof();
 	abstract public function write($str);
 	abstract public function truncate();
+	abstract public function is_eof();
 	abstract public function is_opened();
 	abstract public function is_closed();
 	/**
