@@ -71,8 +71,8 @@ class BitStream extends Stream{
 	 * 閉じる
 	 */
 	public function close(){
-		$this->_resource_->close();
 		$this->truncate();
+		if($this->_resource_ instanceof Stream) $this->_resource_->close();
 	}
 	public function seek($len,$mode=null){
 		$this->clear_buffer();
@@ -98,7 +98,7 @@ class BitStream extends Stream{
 	 * trucate
 	 */
 	public function truncate(){
-		$this->_resource_->truncate();
+		if($this->_resource_ instanceof Stream) $this->_resource_->truncate();
 		$this->clear_buffer();
 		return $this;
 	}
@@ -128,9 +128,9 @@ class BitStream extends Stream{
 	 * @return binary
 	 */
 	public function get_bit(){
-		if($this->_buf_ === null) $this->_buf_ = $this->_resource_->read(1);
+		if($this->_buf_ === null) $this->_buf_ = ord($this->_resource_->read(1));
 		if($this->_buf_ === null) return;
-		$r = 1 & (ord($this->_buf_) >> (8 - ++$this->offset));
+		$r = ($this->_buf_ >> (8 - ++$this->offset)) & 1;
 		if($this->offset == 8) $this->clear_buffer();
 		return (int)$r;
 		/***
