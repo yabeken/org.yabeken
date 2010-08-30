@@ -122,8 +122,7 @@ abstract class Stream extends Object{
 	 * @return $this
 	 */
 	final public function put_int16_be($value){
-		$value &= 0xFFFF;
-		return $this->put_uint16_be(($value < 0) ? $value + 0x10000 : $value);
+		return $this->put_uint16_be(self::is_negative($value) ? ~((0x8000 | $value) & 0xFFFF) + 1 : $value);
 	}
 	/**
 	 * put value as 16bit signed integer by little endian order
@@ -131,8 +130,7 @@ abstract class Stream extends Object{
 	 * @return $this
 	 */
 	final public function put_int16_le($value){
-		$value &= 0xFFFF;
-		return $this->put_uint16_le(($value < 0) ? $value + 0x10000 : $value);
+		return $this->put_uint16_le(self::is_negative($value) ? ~((0x8000 | $value) & 0xFFFF) + 1 : $value);
 	}
 	/**
 	 * put value as 16bit unsigned integer by big endian order
@@ -156,8 +154,7 @@ abstract class Stream extends Object{
 	 * @return $this
 	 */
 	final public function put_int32_be($value){
-		$value &= 0xFFFFFFFF;
-		return $this->put_uint32_be(($value < 0) ? (~$value) + 1 : $value);
+		return $this->put_uint32_be(self::is_negative($value) ? ~((0x80000000 | $value) & 0xFFFFFFFF) + 1 : $value);
 	}
 	/**
 	 * put value as 32bit signed integer by little endian order
@@ -165,8 +162,7 @@ abstract class Stream extends Object{
 	 * @return $this
 	 */
 	final public function put_int32_le($value){
-		$value &= 0xFFFFFFFF;
-		return $this->put_uint32_le(($value < 0) ? (~$value) + 1 : $value);
+		return $this->put_uint32_le(self::is_negative($value) ? ~((0x80000000 | $value) & 0xFFFFFFFF) + 1 : $value);
 	}
 	/**
 	 * put value as 32bit unsigned integer by big endian order
@@ -203,5 +199,13 @@ abstract class Stream extends Object{
 	final protected function write_pack($value,$format){
 		$this->write(pack($format,$value));
 		return $this;
+	}
+	/**
+	 * is negative integer
+	 * @param integer $value
+	 * @return boolean
+	 */
+	static protected function is_negative($value){
+		return (1 << (PHP_INT_SIZE * 8 - 1)) & $value !== 0;
 	}
 }
