@@ -164,6 +164,10 @@ class TextStream extends Stream{
 		$this->offset = 0;
 		$this->length = 0;
 		return $this;
+		/***
+			$s = new TextStream('hoge');
+			eq(0,$s->truncate()->length());
+		 */
 	}
 	/**
 	 * ポインタが終端かどうか

@@ -124,11 +124,11 @@ class BitStream extends Stream{
 		return $this->_resource_->is_closed();
 	}
 	/**
-	 * 1 bit
+	 * get a bit
 	 * @return binary
 	 */
 	public function get_bit(){
-		if($this->_buf_ === null) $this->_buf_ = ord($this->_resource_->read(1));
+		if($this->_buf_ === null) $this->_buf_ = $this->get_uint8();
 		if($this->_buf_ === null) return;
 		$r = ($this->_buf_ >> (8 - ++$this->offset)) & 1;
 		if($this->offset == 8) $this->clear_buffer();
@@ -148,7 +148,7 @@ class BitStream extends Stream{
 		 */
 	}
 	/**
-	 * read bits
+	 * get bits
 	 * @param integer $length
 	 * @return binary
 	 */
