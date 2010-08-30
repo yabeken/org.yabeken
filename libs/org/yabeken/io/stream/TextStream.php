@@ -271,7 +271,7 @@ class TextStream extends Stream{
 		# uint32 be
 		# 1000 0000 0000 0000 0000 0000 0000 0000 = 2147483648
 		$s->truncate()->put_uint32_be(1 << 31)->offset(0);
-		eq(2147483648,$s->get_uint32_be());
+		eq(PHP_INT_SIZE == 4 ? 1 << 31 : 2147483648,$s->get_uint32_be());
 		
 		# 0111 1111 1111 1111 1111 1111 1111 1111 = 2147483647
 		$s->truncate()->put_uint32_be(~(1 << 31))->offset(0);
@@ -280,7 +280,7 @@ class TextStream extends Stream{
 		# uint32 le
 		# 0000 0000 0000 0000 1000 0000 0000 0000 = 2147483648
 		$s->truncate()->put_uint32_le(1 << 31)->offset(0);
-		eq(2147483648,$s->get_uint32_le());
+		eq(PHP_INT_SIZE == 4 ? 1 << 31 : 2147483648,$s->get_uint32_le());
 		
 		# 1111 1111 1111 1111 0111 1111 1111 1111 = 2147483647
 		$s->truncate()->put_uint32_le(~(1 << 31))->offset(0);
