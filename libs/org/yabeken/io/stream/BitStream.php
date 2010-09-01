@@ -29,7 +29,8 @@ class BitStream extends Stream{
 	 * Destructor
 	 */
 	final protected function __del__(){
-		$this->close();
+		$this->truncate();
+		if($this->_resource_ instanceof Stream) $this->_resource_->close();
 	}
 	/**
 	 * get offset
@@ -72,7 +73,7 @@ class BitStream extends Stream{
 	 */
 	public function close(){
 		$this->truncate();
-		if($this->_resource_ instanceof Stream) $this->_resource_->close();
+		$this->_resource_->close();
 	}
 	public function seek($len,$mode=null){
 		$this->clear_buffer();

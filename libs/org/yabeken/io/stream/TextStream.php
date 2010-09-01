@@ -76,6 +76,7 @@ class TextStream extends Stream{
 	 * @param string $needle
 	 * @param boolean $invert true の際は指定した文字が出現しない最後のオフセット
 	 * @param integer $limit
+	 * @return integer
 	 */
 	public function search($needle,$invert=false,$limit=null){
 		//TODO $invert -> $mode
